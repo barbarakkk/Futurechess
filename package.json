@@ -1,9 +1,13 @@
 {
   "name": "chesshub",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
+  "workspaces": ["client", "server"],
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
+    "start": "npm run start -w server",
+    "build": "npm run prisma:generate -w server && npm run prisma:deploy -w server",
+    "railway:push-env": "node server/scripts/push-env-to-railway.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
