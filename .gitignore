@@ -1,0 +1,80 @@
+# ChessHub — version only what is needed to install, build, and run the app.
+# Do not commit real credentials, live database URLs, JWT secrets, dumps, or user data.
+
+# Optional UI prototype (not used by Vite client + Express server — omit for a smaller repo)
+/V0-design/
+
+# --- Dependencies ---
+node_modules/
+
+# --- Production / dev build output ---
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# --- Tool caches ---
+.vite/
+.cache/
+.parcel-cache/
+.turbo/
+coverage/
+.nyc_output/
+.eslintcache
+
+# --- Secrets & environment (never commit real .env — use .env.example as a template) ---
+.env
+.env.*
+!.env.example
+!client/.env.example
+!server/.env.example
+.env*.local
+
+# --- TLS / crypto material ---
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# --- Database files & exports (often contain emails, games, personal data) ---
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.sql.gz
+backups/
+**/db-backup*/
+
+# --- Logs (can include paths or tokens) ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Editors / IDEs ---
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+
+# --- Prisma generated output (if emitted under src; client is normally in node_modules) ---
+server/src/generated/
+
+# --- Cursor: local workspace state only (rules under .cursor/rules may still be committed) ---
+.cursor/projects/

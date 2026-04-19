@@ -1,0 +1,14 @@
+---
+description: Enforce PRD task completion checkoff workflow
+globs: "**/PRD.md"
+alwaysApply: false
+---
+
+# PRD Task Completion Workflow
+
+- Before starting any task, read `PRD.md`.
+- Before implementing, state which PRD task is being worked on.
+- Before implementing, state the acceptance criteria for that task.
+- After code is written and confirmed working, immediately update `PRD.md` checkboxes from `[ ]` to `[x]` for the completed item.
+- Never mark a parent task complete unless all of its subtasks are complete.
+- Never mark any task complete unless it is fully implemented and confirmed working.

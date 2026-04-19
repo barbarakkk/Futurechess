@@ -1,0 +1,173 @@
+# UI Migration PRD (No Logic Changes)
+Project: ChessHub  
+Goal: Replace UI/UX layer with v0-inspired design while preserving all existing application behavior and backend contracts.
+
+---
+
+## 1) Scope and Constraints
+
+### In Scope
+- Replace page JSX layout
+- Replace visual components
+- Replace styling/theme/tokens
+- Replace non-logic UI wrappers/shell
+
+### Out of Scope (Must NOT change)
+- API endpoints and request/response contracts
+- Auth/session logic
+- Zustand store behavior
+- Realtime socket event names/payloads
+- Chess/gameplay validation logic
+- Database schema and backend business logic
+
+---
+
+## 2) Core Principle
+
+**UI-only migration.**  
+Existing logic must continue to work exactly as before; only presentation and UX structure are replaced.
+
+---
+
+## 3) Definition of Success
+
+- App flow: Landing -> Login/Register -> Dashboard
+- Existing features still work end-to-end:
+  - Auth
+  - Dashboard data
+  - Friend game creation/join/realtime gameplay
+  - AI game creation/moves/results
+- No breaking TypeScript/build errors
+- No backend contract changes required
+
+---
+
+## 4) Migration Order (Required)
+
+### Phase 1: Landing + Login + Register
+- [x] Add landing page route and UI
+- [x] Replace login page UI with v0-inspired layout
+- [x] Replace register page UI with v0-inspired layout
+- [x] Preserve current submit handlers, validations, and navigation logic
+- [x] Verify auth flow still redirects to dashboard on success
+
+### Phase 2: Dashboard
+- [x] Replace dashboard page layout and card structure
+- [x] Keep current dashboard data fetching and stats logic
+- [x] Keep navigation actions wired to existing routes
+- [x] Keep recent games rendering using existing API fields
+
+### Phase 3: New Game + AI New
+- [x] Replace `/new-game` UI to v0-inspired control cards
+- [x] Replace `/ai-game/new` setup UI to v0-inspired controls
+- [x] Keep existing create handlers and payloads unchanged
+- [x] Keep error/loading states functional
+
+### Phase 4: Friend Game + AI Game In-Play
+- [x] Replace friend game in-play screen visual layout
+- [x] Replace AI game in-play screen visual layout
+- [x] Keep board behavior, move submit logic, action buttons, and status logic unchanged
+- [x] Keep illegal move handling and user feedback intact
+
+### Phase 5: Sidebar/Shell Consistency Pass
+- [x] Standardize app shell/sidebar visual system across protected pages
+- [x] Ensure desktop fixed + mobile collapsible behavior remains
+- [x] Ensure placeholders (Game History, Settings) match visual language
+- [x] Ensure spacing/typography/colors are consistent globally
+
+---
+
+## 5) File-Level Guardrails
+
+### Logic Files (Do Not Modify unless strictly required by UI import path only)
+- [ ] `client/src/lib/api.ts`
+- [ ] `client/src/store/authStore.ts`
+- [ ] Socket/game logic files
+- [ ] Backend routes/services
+
+### UI Migration Target Files
+- [x] `client/src/pages/LandingPage.tsx` (new/replace)
+- [x] `client/src/pages/LoginPage.tsx`
+- [x] `client/src/pages/RegisterPage.tsx`
+- [x] `client/src/pages/DashboardPage.tsx`
+- [x] `client/src/pages/NewGamePage.tsx`
+- [x] `client/src/pages/AiGamePage.tsx`
+- [x] `client/src/pages/FriendGamePage.tsx`
+- [x] `client/src/components/AppShell.tsx` (consistency pass)
+- [x] `client/src/style.css` and/or Tailwind token layer
+
+---
+
+## 6) Next.js to React(Vite) Conversion Rules
+
+- [x] Replace `next/link` with `react-router-dom` `Link`/`NavLink`
+- [x] Replace `next/image` with `img` (or existing image pattern)
+- [x] Do not copy Next route structure (`app/...`) as runtime routing
+- [x] Copy layout/sections/components styling only
+- [x] Keep React Router route ownership in `client/src/App.tsx`
+
+---
+
+## 7) Component Strategy
+
+- [x] Reuse existing shadcn-style primitives in project (`button`, `card`, `badge`)
+- [x] Add additional UI primitives only when needed by migrated page
+- [x] Keep UI components presentation-focused (no business logic inside)
+- [x] Prefer composition over rewriting logic-heavy page functions
+
+---
+
+## 8) QA Checklist Per Phase
+
+For each migrated phase:
+- [x] `npm run build` passes (client)
+- [x] No new linter/type errors
+- [x] Existing page logic behavior unchanged
+- [x] API requests unchanged in shape
+- [x] Loading/error/disabled states still present
+- [x] Navigation paths still correct
+
+---
+
+## 9) Manual Smoke Tests (Post-Migration)
+
+### Auth
+- [ ] Register works
+- [ ] Login works
+- [ ] Redirect to dashboard works
+
+### Dashboard
+- [ ] Stats load correctly
+- [ ] Recent games load correctly
+- [ ] CTA buttons route correctly
+
+### Friend Game
+- [ ] Create game works
+- [ ] Join game works via shared link
+- [ ] Realtime sync works
+- [ ] Move validation/errors still work
+- [ ] Resign/draw flows still work
+
+### AI Game
+- [ ] Create AI game works
+- [ ] Move submission works
+- [ ] AI response works
+- [ ] Illegal move errors still display correctly
+
+---
+
+## 10) Rollback Plan
+
+- [ ] Migrate phase-by-phase (commit per phase)
+- [ ] If regression appears, revert only latest phase
+- [ ] Never mix multi-phase UI rewrites in one large unverified change
+
+---
+
+## 11) Exit Criteria
+
+- [x] All 5 phases complete
+- [ ] All smoke tests pass
+- [x] UI matches v0-inspired design direction
+- [x] Logic/contracts unchanged
+- [x] App remains stable and deployable

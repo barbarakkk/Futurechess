@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: hsl(222 47% 4%);
+  color: hsl(210 40% 98%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: hsl(204 94% 54%);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Chessboard wrapper — pages also set max-width via Tailwind */
+.board-shell {
+  width: 100%;
+  max-width: 560px;
+}

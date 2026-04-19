@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  userCode     String   @unique @map("user_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  whiteGames    Game[]           @relation("white_games")
+  blackGames    Game[]           @relation("black_games")
+  hiddenGames   UserHiddenGame[]
+  aiGames       AIGame[]
+
+  @@map("users")
+}
+
+model Game {
+  id            String    @id @default(uuid())
+  whitePlayerId String?   @map("white_player_id")
+  blackPlayerId String?   @map("black_player_id")
+  timeControl   String    @map("time_control")
+  status        String
+  result        String?
+  movesJson     Json?     @map("moves_json")
+  pgn           String?
+  startedAt     DateTime? @map("started_at")
+  endedAt       DateTime? @map("ended_at")
+
+  whitePlayer    User?            @relation("white_games", fields: [whitePlayerId], references: [id], onDelete: SetNull)
+  blackPlayer    User?            @relation("black_games", fields: [blackPlayerId], references: [id], onDelete: SetNull)
+  hiddenByUsers  UserHiddenGame[]
+
+  @@map("games")
+}
+
+model UserHiddenGame {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  gameId   String   @map("game_id")
+  hiddenAt DateTime @default(now()) @map("hidden_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@map("user_hidden_games")
+}
+
+model AIGame {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  difficulty String
+  userColor  String   @map("user_color")
+  result     String?
+  pgn        String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_games")
+}

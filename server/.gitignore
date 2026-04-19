@@ -1,0 +1,8 @@
+node_modules
+
+# Secrets & env — only .env.example belongs in git
+.env
+.env.*
+!.env.example
+
+/src/generated/prisma
