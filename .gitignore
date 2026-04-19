@@ -78,3 +78,7 @@ server/src/generated/
 
 # --- Cursor: local workspace state only (rules under .cursor/rules may still be committed) ---
 .cursor/projects/
+
+# --- Agent / IDE skill packs (local docs — not required to run the server) ---
+**/.agents/
+skills-lock.json
