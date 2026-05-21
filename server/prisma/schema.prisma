@@ -43,6 +43,8 @@ model Game {
   blackPlayer    User?            @relation("black_games", fields: [blackPlayerId], references: [id], onDelete: SetNull)
   hiddenByUsers  UserHiddenGame[]
 
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
   @@map("games")
 }
 
@@ -56,6 +58,8 @@ model UserHiddenGame {
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameId])
+  @@index([userId])
+  @@index([gameId])
   @@map("user_hidden_games")
 }
 
@@ -70,5 +74,6 @@ model AIGame {
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("ai_games")
 }
