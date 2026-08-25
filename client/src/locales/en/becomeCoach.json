@@ -1,0 +1,114 @@
+{
+  "badge": "Coach with us",
+  "title": "Become a FutureChess coach",
+  "subtitle": "Tell us about your chess background and coaching experience. We review every application by hand.",
+  "loading": "Loading...",
+  "loadError": "Could not load your application status. Please try again.",
+  "pending": {
+    "body": "Your application is being reviewed. We'll email you as soon as there's a decision."
+  },
+  "rejected": {
+    "body": "Your last application wasn't approved. You're welcome to apply again below."
+  },
+  "approved": {
+    "body": "Your application was approved! Log out and back in to pick up your new Coach Dashboard."
+  },
+  "form": {
+    "title": "Application details",
+    "wizard": {
+      "steps": {
+        "about": "About you",
+        "contact": "Contact",
+        "profile": "Profile",
+        "pricing": "Pricing",
+        "availability": "Availability"
+      },
+      "stepCounter": "Step {{current}} of {{total}}",
+      "back": "Back",
+      "next": "Next",
+      "stepIncompleteError": "Please fill in the required fields before continuing.",
+      "availability": {
+        "utcNote": "All times below are in UTC.",
+        "calendarTitle": "This month",
+        "calendarSubtitle": "Click a day to add availability, or click an already-added day to remove it.",
+        "pastDateError": "You can't pick that date — availability has to start the day after you apply.",
+        "legendAvailable": "Available",
+        "oneOffPromptTitle": "Add availability for {{date}}",
+        "oneOffAdd": "Add",
+        "oneOffCancel": "Cancel",
+        "summaryEmpty": "You haven't added any availability yet — you can always add more later from your Coach Dashboard.",
+        "daysAddedCount_one": "{{count}} day added this month",
+        "daysAddedCount_other": "{{count}} days added this month"
+      }
+    },
+    "name": "First name",
+    "surname": "Last name",
+    "titleField": "Title",
+    "titlePlaceholder": "e.g. FIDE Master",
+    "fideId": "FIDE ID (optional)",
+    "fideIdPlaceholder": "e.g. 13304821",
+    "experienceYears": "Years of coaching experience",
+    "fideRating": "FIDE rating (optional)",
+    "phone": "Mobile number",
+    "phonePlaceholder": "+995 5XX XX XX XX",
+    "whatsapp": "WhatsApp number (optional)",
+    "whatsappLink": "WhatsApp link (optional)",
+    "whatsappLinkPlaceholder": "https://wa.me/995...",
+    "telegram": "Telegram username (optional)",
+    "telegramPlaceholder": "@username",
+    "telegramLink": "Telegram link (optional)",
+    "telegramLinkPlaceholder": "https://t.me/...",
+    "bio": "Bio (optional)",
+    "specialization": "Specialization",
+    "specializationPlaceholder": "Select an option",
+    "specializationOptions": {
+      "coach": "Coach",
+      "sparringPartner": "Sparring partner",
+      "coachSparringPartner": "Coach / Sparring partner"
+    },
+    "languages": "Languages you speak",
+    "languagesPlaceholder": "Select languages",
+    "languagesRequiredError": "Select at least one language",
+    "languageOptions": {
+      "georgian": "Georgian",
+      "english": "English",
+      "russian": "Russian",
+      "german": "German",
+      "french": "French",
+      "spanish": "Spanish",
+      "turkish": "Turkish",
+      "armenian": "Armenian",
+      "ukrainian": "Ukrainian"
+    },
+    "hourlyRate": "Hourly rate",
+    "currency": "Currency",
+    "photo": "Photo (optional)",
+    "photoUpload": "Upload photo",
+    "photoChange": "Change photo",
+    "photoUploading": "Processing...",
+    "photoRemove": "Remove photo",
+    "photoHint": "JPG, PNG or WebP — resized automatically.",
+    "photoInvalidType": "Please choose an image file.",
+    "photoResizeError": "Could not process that image. Please try another file.",
+    "submit": "Submit application",
+    "submitting": "Submitting...",
+    "submitError": "Could not submit your application. Please try again."
+  },
+  "response": {
+    "loading": "Confirming...",
+    "invalidTitle": "This link is invalid or has expired",
+    "invalidBody": "The application link may have already been used or is incorrect.",
+    "alreadyRespondedTitle": "Already responded",
+    "alreadyRespondedBody": "This application has already been {{status}}.",
+    "approvedTitle": "Application approved",
+    "approvedBody": "The applicant has been made a coach and notified by email.",
+    "rejectedTitle": "Application rejected",
+    "rejectedBody": "The applicant has been notified by email.",
+    "backHome": "Back to FutureChess",
+    "statusLabel": {
+      "pending": "pending",
+      "approved": "approved",
+      "rejected": "rejected"
+    }
+  }
+}

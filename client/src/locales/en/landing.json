@@ -1,0 +1,29 @@
+{
+  "signIn": "Sign in",
+  "createAccount": "Create account",
+  "badge": "Realtime play · Stockfish AI · Invite links",
+  "heroTitle": "Play chess with friends, anytime",
+  "heroSubtitle": "Jump into rated-style friend games with server clocks, or practice against the engine — same rules, one clean experience.",
+  "getStarted": "Get started",
+  "haveAccount": "I have an account",
+  "features": {
+    "friendGames": {
+      "title": "Friend games",
+      "description": "Create a room, share the link, and play live with clocks synced on the server."
+    },
+    "playVsAi": {
+      "title": "Play vs AI",
+      "description": "Open a new AI game, pick your side, and get moves powered by Stockfish."
+    },
+    "dashboard": {
+      "title": "Your dashboard",
+      "description": "Track stats and jump back into recent games from one hub after you sign in."
+    }
+  },
+  "replay": {
+    "whitePlayer": "Nona Gaprindashvili",
+    "blackPlayer": "Rudolf Servaty",
+    "result": "Dortmund, 1974 · Black resigned on move 17",
+    "quote": "A brilliancy — the queen cannot be stopped."
+  }
+}

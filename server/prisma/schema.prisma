@@ -17,12 +17,22 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   userCode     String   @unique @map("user_code")
+  preferences  Json     @default("{}")
+  role         String   @default("player") // "player" | "coach"
   createdAt    DateTime @default(now()) @map("created_at")
 
-  whiteGames    Game[]           @relation("white_games")
-  blackGames    Game[]           @relation("black_games")
-  hiddenGames   UserHiddenGame[]
-  aiGames       AIGame[]
+  // Forgot-password flow: only a SHA-256 hash of the emailed token is ever stored
+  // (never the raw token); both are cleared once the token is used or replaced.
+  resetTokenHash   String?   @unique @map("reset_token_hash")
+  resetTokenExpiry DateTime? @map("reset_token_expiry")
+
+  whiteGames        Game[]             @relation("white_games")
+  blackGames        Game[]             @relation("black_games")
+  hiddenGames       UserHiddenGame[]
+  aiGames           AIGame[]
+  coachBookings     CoachBooking[]
+  coachApplications CoachApplication[]
+  coachProfile      Coach?
 
   @@map("users")
 }
@@ -39,9 +49,9 @@ model Game {
   startedAt     DateTime? @map("started_at")
   endedAt       DateTime? @map("ended_at")
 
-  whitePlayer    User?            @relation("white_games", fields: [whitePlayerId], references: [id], onDelete: SetNull)
-  blackPlayer    User?            @relation("black_games", fields: [blackPlayerId], references: [id], onDelete: SetNull)
-  hiddenByUsers  UserHiddenGame[]
+  whitePlayer   User?            @relation("white_games", fields: [whitePlayerId], references: [id], onDelete: SetNull)
+  blackPlayer   User?            @relation("black_games", fields: [blackPlayerId], references: [id], onDelete: SetNull)
+  hiddenByUsers UserHiddenGame[]
 
   @@index([whitePlayerId])
   @@index([blackPlayerId])
@@ -72,8 +82,132 @@ model AIGame {
   pgn        String?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("ai_games")
+}
+
+model Coach {
+  id                 String   @id @default(uuid())
+  userId             String?  @unique @map("user_id")
+  name               String
+  surname            String
+  title              String
+  fideId             String?  @map("fide_id")
+  experienceYears    Int      @map("experience_years")
+  bio                String?
+  photoUrl           String?  @map("photo_url")
+  fideRating         Int?     @map("fide_rating")
+  specialties        String[] @default([])
+  languages          String[] @default([])
+  hourlyRate         Int?     @map("hourly_rate")
+  hourlyRateCurrency String?  @map("hourly_rate_currency")
+  phone              String?
+  whatsapp           String?
+  whatsappLink       String?  @map("whatsapp_link")
+  telegram           String?
+  telegramLink       String?  @map("telegram_link")
+  email              String   @unique
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user                   User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  availability           CoachAvailability[]
+  bookings               CoachBooking[]
+  availabilityExceptions CoachAvailabilityException[]
+
+  @@map("coaches")
+}
+
+model CoachAvailability {
+  id        String   @id @default(uuid())
+  coachId   String   @map("coach_id")
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  isBooked  Boolean  @default(false) @map("is_booked")
+
+  coach    Coach          @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  // A slot can accumulate multiple booking attempts over time (e.g. a declined
+  // request followed by a later one) — only `isBooked` determines current availability.
+  bookings CoachBooking[]
+
+  @@index([coachId])
+  @@index([startTime])
+  @@map("coach_availability")
+}
+
+model CoachBooking {
+  id            String   @id @default(uuid())
+  slotId        String   @map("slot_id")
+  userId        String   @map("user_id")
+  coachId       String   @map("coach_id")
+  status        String   @default("pending")
+  note          String?  @db.VarChar(500)
+  responseToken String   @unique @map("response_token")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  slot  CoachAvailability @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coach Coach             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([slotId])
+  @@index([userId])
+  @@index([coachId])
+  @@map("coach_bookings")
+}
+
+model CoachApplication {
+  id                     String    @id @default(uuid())
+  userId                 String    @map("user_id")
+  name                   String
+  surname                String
+  title                  String
+  fideId                 String?   @map("fide_id")
+  experienceYears        Int       @map("experience_years")
+  bio                    String?
+  photoUrl               String?   @map("photo_url")
+  fideRating             Int?      @map("fide_rating")
+  specialties            String[]  @default([])
+  languages              String[]  @default([])
+  hourlyRate             Int?      @map("hourly_rate")
+  hourlyRateCurrency     String?   @map("hourly_rate_currency")
+  phone                  String?
+  whatsapp               String?
+  whatsappLink           String?   @map("whatsapp_link")
+  telegram               String?
+  telegramLink           String?   @map("telegram_link")
+  // Step 5 of the application wizard — the calendar dates the applicant clicked as available,
+  // captured before a Coach row exists. Materialized into CoachAvailabilityException rows
+  // (and generated bookable slots) at approval time.
+  availabilityExceptions Json?     @map("availability_exceptions")
+  status                 String    @default("pending") // pending | approved | rejected
+  responseToken          String    @unique @map("response_token")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  respondedAt            DateTime? @map("responded_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("coach_applications")
+}
+
+// A coach's whole schedule is just this set of explicit dates — there's no recurring
+// weekly pattern (see coach-selfservice.prd and coachAvailabilityService.js). `type` is
+// always "one_off" going forward; it's kept as a plain string rather than dropped so any
+// pre-existing "blocked" rows (from the now-removed weekly-schedule feature) don't error out.
+model CoachAvailabilityException {
+  id          String   @id @default(uuid())
+  coachId     String   @map("coach_id")
+  date        DateTime @db.Date
+  type        String   @default("one_off")
+  startMinute Int?     @map("start_minute")
+  endMinute   Int?     @map("end_minute")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, date])
+  @@index([coachId])
+  @@map("coach_availability_exceptions")
 }

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Crown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -13,6 +14,8 @@ import {
 import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
+import { getSafeRedirect } from "../lib/redirect";
+import { hydratePreferencesFromServer } from "../components/PreferencesHydrator";
 import { useAuthStore, type AuthUser } from "../store/authStore";
 
 type RegisterForm = {
@@ -22,7 +25,10 @@ type RegisterForm = {
 };
 
 export function RegisterPage() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = getSafeRedirect(searchParams.get("redirect"));
   const setAuth = useAuthStore((state) => state.setAuth);
   const [form, setForm] = useState<RegisterForm>({
     username: "",
@@ -41,9 +47,10 @@ export function RegisterPage() {
       const response = await api.post("/auth/register", form);
       const payload = response.data as { token: string; user: AuthUser };
       setAuth(payload.token, payload.user);
-      navigate("/dashboard");
+      await hydratePreferencesFromServer().catch(() => {});
+      navigate(redirectTo || "/dashboard");
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Registration failed"));
+      setError(getApiErrorMessage(requestError, t("register.registrationFailed")));
     } finally {
       setLoading(false);
     }
@@ -62,26 +69,26 @@ export function RegisterPage() {
             className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:opacity-90"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-              <Crown className="h-5 w-5 text-primary" aria-hidden />
+              <Crown className="h-5 w-5 text-[#D4AF37]" aria-hidden />
             </span>
-            ChessHub
+            FutureChess
           </Link>
         </div>
 
-        <Card className="border-border/80 shadow-lg shadow-black/20">
+        <Card className="border-border/80 shadow-soft">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              Create your account
+              {t("register.title")}
             </CardTitle>
             <CardDescription>
-              Choose a username and secure password to get started.
+              {t("register.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="register-username" className="text-sm font-medium">
-                  Username
+                  {t("username")}
                 </label>
                 <Input
                   id="register-username"
@@ -98,7 +105,7 @@ export function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="register-email" className="text-sm font-medium">
-                  Email
+                  {t("email")}
                 </label>
                 <Input
                   id="register-email"
@@ -113,7 +120,7 @@ export function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="register-password" className="text-sm font-medium">
-                  Password
+                  {t("password")}
                 </label>
                 <Input
                   id="register-password"
@@ -130,25 +137,28 @@ export function RegisterPage() {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  At least 8 characters.
+                  {t("register.passwordHint")}
                 </p>
               </div>
 
               {error ? (
-                <p className="text-sm text-red-400" role="alert">
+                <p className="text-sm text-red-600" role="alert">
                   {error}
                 </p>
               ) : null}
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating account…" : "Create account"}
+                {loading ? t("register.creatingAccount") : t("createAccount")}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link to="/login" className="font-medium text-primary hover:underline">
-                Sign in
+              {t("register.alreadyHaveAccount")}{" "}
+              <Link
+                to={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
+                className="font-medium text-primary hover:underline"
+              >
+                {t("signIn")}
               </Link>
             </p>
           </CardContent>

@@ -82,3 +82,7 @@ server/src/generated/
 # --- Agent / IDE skill packs (local docs — not required to run the server) ---
 **/.agents/
 skills-lock.json
+
+# --- Local / handoff docs (optional — keep out of git if personal) ---
+teach.md
+tech.md

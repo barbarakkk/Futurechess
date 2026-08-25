@@ -1,0 +1,71 @@
+{
+  "badge": "Dashboard",
+  "welcomeBack": "Welcome back, <1>{{username}}</1>",
+  "defaultPlayerName": "Player",
+  "subtitle": "Pick a mode, review your stats, or jump into a recent game.",
+  "stats": {
+    "totalGames": {
+      "title": "Total games",
+      "badge": "All modes"
+    },
+    "winRate": {
+      "title": "Win rate",
+      "badge": "Completed games"
+    },
+    "currentStreak": {
+      "title": "Current streak",
+      "badge": "Consecutive wins"
+    }
+  },
+  "playVsFriend": {
+    "title": "Play vs friend",
+    "description": "Realtime clocks, invite links, and server-validated moves.",
+    "timeControls": {
+      "bullet": "Bullet",
+      "blitz": "Blitz",
+      "rapid": "Rapid",
+      "classical": "Classical"
+    },
+    "cta": "Create game"
+  },
+  "playVsAi": {
+    "title": "Play vs AI",
+    "description": "Adjustable strength — powered by Stockfish on the server.",
+    "difficulties": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "cta": "Start AI game"
+  },
+  "joinGame": {
+    "title": "Join a friend's game",
+    "description": "Got an invite link from a friend? Paste it here to jump straight into the game.",
+    "placeholder": "Paste game link or code",
+    "button": "Join game",
+    "emptyError": "Paste a game link first.",
+    "invalidError": "That doesn't look like a valid game link."
+  },
+  "myBookings": {
+    "title": "My coaching sessions",
+    "description": "Sessions you've requested with a coach.",
+    "loading": "Loading your sessions...",
+    "empty": "You haven't booked a coach yet.",
+    "browseCoaches": "Browse coaches",
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "declined": "Declined"
+    }
+  },
+  "recentGames": {
+    "title": "Recent games",
+    "description": "Continue a friend match from your latest activity.",
+    "viewAll": "View all",
+    "loading": "Loading recent games...",
+    "empty": "No recent games yet."
+  },
+  "errors": {
+    "loadFailed": "Could not load dashboard data."
+  }
+}

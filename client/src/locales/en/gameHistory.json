@@ -1,0 +1,59 @@
+{
+  "badge": "Friend games",
+  "title": "Game history",
+  "subtitle": "Your results against opponents in real-time friend games.",
+  "loading": "Loading history…",
+  "errors": {
+    "loadFailed": "Could not load game history.",
+    "deleteFailed": "Could not remove this game from your history."
+  },
+  "stats": {
+    "record": "Record",
+    "recordValue": "{{wins}}W — {{losses}}L — {{draws}}D",
+    "finished": "{{count}} finished",
+    "open": "{{count}} open",
+    "winRate": "Win rate",
+    "winRateValue": "{{rate}}%",
+    "winRateEmpty": "—",
+    "winRateSubtitle": "From completed friend games",
+    "wins": "Wins",
+    "losses": "Losses"
+  },
+  "empty": "No friend games yet. Create a game from the menu and share the link.",
+  "table": {
+    "title": "All games",
+    "description": "Newest first. Open to review the board, or remove a finished or waiting game from <1>your</1> history only — your opponent's list is unchanged (finished or waiting games only — not games still in progress).",
+    "columns": {
+      "date": "Date",
+      "opponent": "Opponent",
+      "you": "You",
+      "clock": "Clock",
+      "result": "Result",
+      "actions": "Actions"
+    },
+    "notJoined": "(not joined)",
+    "open": "Open",
+    "remove": "Remove",
+    "removeTitleOngoing": "Finish or resign before you can remove this game from your history.",
+    "removeTitle": "Remove this game from your history only (your opponent still sees it)",
+    "removeAriaLabel": "Remove game {{id}} from your history"
+  },
+  "color": {
+    "white": "White",
+    "black": "Black"
+  },
+  "outcome": {
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw",
+    "waiting": "Waiting",
+    "inProgress": "In progress"
+  },
+  "deleteDialog": {
+    "title": "Remove from your history?",
+    "description": "This removes the match from <1>your</1> history only. Your opponent's history, stats, and saved game data are not affected. You won't be able to restore it to your list later.",
+    "cancel": "Cancel",
+    "removing": "Removing…",
+    "confirm": "Remove from my history"
+  }
+}

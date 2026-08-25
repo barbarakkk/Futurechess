@@ -1,0 +1,70 @@
+{
+  "setup": {
+    "badge": "AI opponent",
+    "title": "New AI game",
+    "subtitle": "Tune Stockfish strength and pick your side — one click to open the board.",
+    "difficulty": {
+      "title": "Difficulty",
+      "description": "Select how aggressively Stockfish will search.",
+      "easy": { "label": "Easy", "hint": "Perfect for beginners" },
+      "medium": { "label": "Medium", "hint": "A balanced challenge" },
+      "hard": { "label": "Hard", "hint": "For experienced players" }
+    },
+    "color": {
+      "title": "Your color",
+      "description": "White moves first; as Black, Stockfish opens.",
+      "white": { "label": "White", "hint": "Play first" },
+      "black": { "label": "Black", "hint": "AI plays first" },
+      "random": { "label": "Random", "hint": "Surprise me" }
+    },
+    "startButton": "Start AI game",
+    "startingButton": "Creating AI game…",
+    "createError": "Could not create AI game."
+  },
+  "play": {
+    "badge": "AI game",
+    "title": "vs Stockfish",
+    "gameId": "Game ID: {{id}}",
+    "loading": "Loading AI game...",
+    "notFoundError": "This AI game link is invalid or expired.",
+    "loadError": "Could not load AI game. It may not exist.",
+    "moveRejectedError": "Move was rejected.",
+    "match": {
+      "title": "Match",
+      "description": "Engine-backed — moves sync when you release a piece.",
+      "you": "You",
+      "opponent": "Opponent",
+      "opponentName": "Stockfish ({{difficulty}})",
+      "result": "Result:",
+      "yourTurn": "Your move.",
+      "aiTurn": "Stockfish is to move.",
+      "finished": "Game finished: {{result}}",
+      "aiPlayed": "Stockfish played {{san}}",
+      "noAiReply": "No AI reply move."
+    },
+    "results": {
+      "white": "White won",
+      "black": "Black won",
+      "draw": "Draw",
+      "inProgress": "In progress"
+    }
+  },
+  "endModal": {
+    "draw": {
+      "title": "Draw",
+      "body": "The game ended in a draw."
+    },
+    "win": {
+      "title": "You won!",
+      "checkmate": "Checkmate — you beat Stockfish!",
+      "generic": "The game is over in your favor."
+    },
+    "loss": {
+      "title": "You lost",
+      "checkmate": "Stockfish checkmated you.",
+      "generic": "Stockfish won this game."
+    },
+    "returning": "Returning to your dashboard in 5 seconds…",
+    "backToDashboard": "Back to dashboard"
+  }
+}

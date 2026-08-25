@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "playVsFriend": "Play vs Friend",
+    "playVsAi": "Play vs AI",
+    "gameHistory": "Game History",
+    "coaches": "Coaches",
+    "becomeCoach": "Become a Coach",
+    "coachDashboard": "Coach Dashboard",
+    "settings": "Settings"
+  },
+  "closeNavigation": "Close navigation",
+  "toggleMenu": "Toggle menu",
+  "playerFallback": "Player",
+  "signOut": "Sign out",
+  "coachWelcome": {
+    "title": "You're a coach now!",
+    "body": "Your coach application has been approved. Head to your Coach Dashboard to fill in your availability and start accepting bookings.",
+    "cta": "Go to Coach Dashboard",
+    "dismiss": "Not now"
+  }
+}

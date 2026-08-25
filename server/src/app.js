@@ -4,6 +4,11 @@ const { ZodError } = require("zod");
 const { authRouter } = require("./routes/authRoutes");
 const { aiGameRouter } = require("./routes/aiGameRoutes");
 const { gameRouter } = require("./routes/gameRoutes");
+const { coachRouter } = require("./routes/coachRoutes");
+const { coachBookingRouter } = require("./routes/coachBookingRoutes");
+const { coachApplicationRouter } = require("./routes/coachApplicationRoutes");
+const { coachDashboardRouter } = require("./routes/coachDashboardRoutes");
+const { meRouter } = require("./routes/meRoutes");
 
 const app = express();
 
@@ -17,6 +22,11 @@ app.get("/", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/games", gameRouter);
 app.use("/ai-games", aiGameRouter);
+app.use("/coaches", coachRouter);
+app.use("/coach-bookings", coachBookingRouter);
+app.use("/coach-applications", coachApplicationRouter);
+app.use("/coach", coachDashboardRouter);
+app.use("/me", meRouter);
 
 app.use((req, res) => {
   res.status(404).json({

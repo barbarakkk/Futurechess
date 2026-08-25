@@ -1,4 +1,6 @@
-import { Settings, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Languages, Palette, Settings, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -6,8 +8,79 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import {
+  BOARD_THEME_IDS,
+  BOARD_THEMES,
+  type BoardThemeId,
+} from "../lib/boardThemes";
+import { updateBoardTheme } from "../lib/preferencesApi";
+import { cn } from "../lib/utils";
+import { usePreferencesStore } from "../store/preferencesStore";
+
+function ThemeSwatch({
+  themeId,
+  selected,
+  label,
+  onSelect,
+}: {
+  themeId: BoardThemeId;
+  selected: boolean;
+  label: string;
+  onSelect: () => void;
+}) {
+  const colors = BOARD_THEMES[themeId];
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-soft",
+        selected ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-primary/30",
+      )}
+    >
+      <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border/60">
+        <div className="aspect-square" style={{ backgroundColor: colors.light }} />
+        <div className="aspect-square" style={{ backgroundColor: colors.dark }} />
+        <div className="aspect-square" style={{ backgroundColor: colors.dark }} />
+        <div className="aspect-square" style={{ backgroundColor: colors.light }} />
+      </div>
+      <span className="mt-2 block text-xs font-medium text-foreground">{label}</span>
+    </button>
+  );
+}
 
 export function SettingsPage() {
+  const { t } = useTranslation("settings");
+  const boardTheme = usePreferencesStore((state) => state.boardTheme);
+  const setBoardTheme = usePreferencesStore((state) => state.setBoardTheme);
+  const hydrateFromServer = usePreferencesStore((state) => state.hydrateFromServer);
+  const [saveError, setSaveError] = useState("");
+  const [savingTheme, setSavingTheme] = useState<BoardThemeId | null>(null);
+
+  async function handleThemeSelect(nextTheme: BoardThemeId) {
+    if (nextTheme === boardTheme || savingTheme) {
+      return;
+    }
+
+    const previousTheme = boardTheme;
+    setSaveError("");
+    setSavingTheme(nextTheme);
+    setBoardTheme(nextTheme);
+
+    try {
+      const preferences = await updateBoardTheme(nextTheme);
+      hydrateFromServer(preferences);
+    } catch {
+      setBoardTheme(previousTheme);
+      setSaveError(t("boardColor.saveError"));
+    } finally {
+      setSavingTheme(null);
+    }
+  }
+
   return (
     <div className="relative">
       <div className="pointer-events-none absolute inset-0 -z-10 opacity-40" aria-hidden>
@@ -18,32 +91,57 @@ export function SettingsPage() {
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
-            Coming soon
+            {t("badge")}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary">
               <Settings className="h-6 w-6 text-primary" aria-hidden />
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Settings</h1>
-              <p className="text-sm text-muted-foreground">
-                Account and gameplay preferences — under construction.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("title")}</h1>
+              <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
             </div>
           </div>
         </header>
 
         <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Placeholder</CardTitle>
-            <CardDescription>
-              Notifications, board theme, and profile options will be configurable here later.
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Languages className="h-4 w-4 text-primary" aria-hidden />
+              {t("language.title")}
+            </CardTitle>
+            <CardDescription>{t("language.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              No settings to change yet; your session and game behavior use ChessHub defaults.
-            </p>
+            <LanguageSwitcher className="max-w-xs" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Palette className="h-4 w-4 text-primary" aria-hidden />
+              {t("boardColor.title")}
+            </CardTitle>
+            <CardDescription>{t("boardColor.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {BOARD_THEME_IDS.map((themeId) => (
+                <ThemeSwatch
+                  key={themeId}
+                  themeId={themeId}
+                  selected={boardTheme === themeId}
+                  label={t(`boardColor.themes.${themeId}`)}
+                  onSelect={() => handleThemeSelect(themeId)}
+                />
+              ))}
+            </div>
+            {saveError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {saveError}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       </section>

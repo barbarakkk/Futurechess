@@ -26,6 +26,7 @@ async function requireAuth(req, _res, next) {
         username: true,
         email: true,
         userCode: true,
+        role: true,
         createdAt: true,
       },
     });

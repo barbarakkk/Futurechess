@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
-  AlertCircle,
   Check,
   Clock,
   Copy,
-  Equal,
+  Link2,
   Loader2,
   Share2,
   Swords,
   Timer,
-  Trophy,
   Users,
   WifiOff,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { io, type Socket } from "socket.io-client";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -25,9 +25,9 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
+import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
 
 type PlayerSummary = {
@@ -76,50 +76,99 @@ function formatClock(totalMs: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function formatResult(result: string | null) {
+// Owns its own 250ms ticker so the countdown re-renders in isolation — the parent
+// page (and the expensive <Chessboard>) no longer re-render 4x/second. Only the
+// side whose turn it is actually ticks; a stopped clock renders its frozen value.
+function LiveClock({
+  side,
+  status,
+  result,
+  turn,
+  serverNow,
+  clockMs,
+}: {
+  side: "w" | "b";
+  status: string;
+  result: string | null;
+  turn: "w" | "b";
+  serverNow: string;
+  clockMs: number;
+}) {
+  const isRunning = status === "active" && !result && turn === side;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isRunning) {
+      return;
+    }
+    const interval = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(interval);
+  }, [isRunning]);
+
+  const elapsed = isRunning ? Math.max(0, now - new Date(serverNow).getTime()) : 0;
+  return <>{formatClock(Math.max(0, clockMs - elapsed))}</>;
+}
+
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+// Converts a server terminalReason like "draw-agreement" into the
+// matching camelCase translation key "drawAgreement".
+function reasonTranslationKey(reason: string) {
+  return reason.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+}
+
+// Bigger, more playful than an icon.
+const GAME_END_STICKERS: Record<"win" | "loss" | "draw", string> = {
+  win: "🏆",
+  loss: "😢",
+  draw: "🤝",
+};
+
+function formatResult(result: string | null, t: TFn) {
   switch (result) {
     case "1-0":
-      return "White won";
+      return t("result.whiteWon");
     case "0-1":
-      return "Black won";
+      return t("result.blackWon");
     case "1/2-1/2":
-      return "Draw";
+      return t("result.draw");
     default:
-      return "In progress";
+      return t("result.inProgress");
   }
 }
 
 function buildGameEndModalCopy(
+  t: TFn,
   localColor: "w" | "b",
   g: GameSummary,
 ): { title: string; body: string; kind: "win" | "loss" | "draw" } {
   const { result, terminalReason, players } = g;
   if (!result) {
-    return { title: "Game over", body: "", kind: "draw" };
+    return { title: t("endModal.gameOver"), body: "", kind: "draw" };
   }
 
   const opponentLabel =
     (localColor === "w" ? players.black?.username : players.white?.username) ??
-    "Your opponent";
+    t("endModal.opponentFallback");
 
   if (result === "1/2-1/2") {
     if (terminalReason === "draw-agreement") {
       return {
-        title: "Draw",
-        body: "You agreed to a draw. The game is over.",
+        title: t("endModal.draw.title"),
+        body: t("endModal.draw.agreement"),
         kind: "draw",
       };
     }
     if (terminalReason === "draw") {
       return {
-        title: "Draw",
-        body: "The game ended in a draw (stalemate, repetition, or other draw rule).",
+        title: t("endModal.draw.title"),
+        body: t("endModal.draw.rule"),
         kind: "draw",
       };
     }
     return {
-      title: "Draw",
-      body: "The game ended in a draw.",
+      title: t("endModal.draw.title"),
+      body: t("endModal.draw.generic"),
       kind: "draw",
     };
   }
@@ -132,26 +181,26 @@ function buildGameEndModalCopy(
     switch (terminalReason) {
       case "resign":
         return {
-          title: "You won",
-          body: `${opponentLabel} resigned.`,
+          title: t("endModal.win.title"),
+          body: t("endModal.win.resign", { opponent: opponentLabel }),
           kind: "win",
         };
       case "checkmate":
         return {
-          title: "You won",
-          body: "Checkmate — well played.",
+          title: t("endModal.win.title"),
+          body: t("endModal.win.checkmate"),
           kind: "win",
         };
       case "timeout":
         return {
-          title: "You won",
-          body: `${opponentLabel} ran out of time.`,
+          title: t("endModal.win.title"),
+          body: t("endModal.win.timeout", { opponent: opponentLabel }),
           kind: "win",
         };
       default:
         return {
-          title: "You won",
-          body: "The game is over in your favor.",
+          title: t("endModal.win.title"),
+          body: t("endModal.win.generic"),
           kind: "win",
         };
     }
@@ -160,46 +209,49 @@ function buildGameEndModalCopy(
   switch (terminalReason) {
     case "resign":
       return {
-        title: "You resigned",
-        body: `${opponentLabel} wins the game.`,
+        title: t("endModal.loss.resignTitle"),
+        body: t("endModal.loss.resignBody", { opponent: opponentLabel }),
         kind: "loss",
       };
     case "checkmate":
       return {
-        title: "You lost",
-        body: "Checkmate.",
+        title: t("endModal.loss.checkmateTitle"),
+        body: t("endModal.loss.checkmateBody"),
         kind: "loss",
       };
     case "timeout":
       return {
-        title: "You lost",
-        body: "You ran out of time.",
+        title: t("endModal.loss.timeoutTitle"),
+        body: t("endModal.loss.timeoutBody"),
         kind: "loss",
       };
     default:
       return {
-        title: "Game over",
-        body: "You lost.",
+        title: t("endModal.gameOver"),
+        body: t("endModal.loss.genericBody"),
         kind: "loss",
       };
   }
 }
 
 export function FriendGamePage() {
+  const { t } = useTranslation("friendGame");
   const navigate = useNavigate();
   const { gameId } = useParams();
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
   const [game, setGame] = useState<GameSummary | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
-  const [now, setNow] = useState(Date.now());
   const [reconnecting, setReconnecting] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
   const [moveHint, setMoveHint] = useState("");
   const socketRef = useRef<Socket | null>(null);
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idCopyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFenForMoveHint = useRef<string | null>(null);
   const hasShownEndModal = useRef(false);
   const [gameEndModal, setGameEndModal] = useState<{
@@ -224,39 +276,6 @@ export function FriendGamePage() {
     return null;
   }, [game, user]);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setNow(Date.now());
-    }, 250);
-
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const liveClocks = useMemo(() => {
-    if (!game) {
-      return { whiteMs: 0, blackMs: 0 };
-    }
-
-    if (game.status !== "active" || game.result) {
-      return game.clocks;
-    }
-
-    const serverNowMs = new Date(game.serverNow).getTime();
-    const elapsed = Math.max(0, now - serverNowMs);
-
-    if (game.turn === "w") {
-      return {
-        whiteMs: Math.max(0, game.clocks.whiteMs - elapsed),
-        blackMs: game.clocks.blackMs,
-      };
-    }
-
-    return {
-      whiteMs: game.clocks.whiteMs,
-      blackMs: Math.max(0, game.clocks.blackMs - elapsed),
-    };
-  }, [game, now]);
-
   const canMove =
     Boolean(game) &&
     game?.status === "active" &&
@@ -271,6 +290,8 @@ export function FriendGamePage() {
     typeof window !== "undefined" && gameId
       ? `${window.location.origin}/game/${gameId}`
       : "";
+
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   async function handleCopyInviteLink() {
     if (!shareLink) {
@@ -287,7 +308,37 @@ export function FriendGamePage() {
         copyFeedbackTimerRef.current = null;
       }, 2000);
     } catch {
-      setError("Could not copy to clipboard. Select the link and copy manually.");
+      setError(t("errors.copyFailed"));
+    }
+  }
+
+  async function handleCopyGameId() {
+    if (!gameId) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(gameId);
+      setIdCopied(true);
+      if (idCopyFeedbackTimerRef.current) {
+        clearTimeout(idCopyFeedbackTimerRef.current);
+      }
+      idCopyFeedbackTimerRef.current = setTimeout(() => {
+        setIdCopied(false);
+        idCopyFeedbackTimerRef.current = null;
+      }, 2000);
+    } catch {
+      setError(t("errors.copyFailed"));
+    }
+  }
+
+  async function handleShareInvite() {
+    if (!shareLink || !canNativeShare) {
+      return;
+    }
+    try {
+      await navigator.share({ title: t("invite.shareTitle"), url: shareLink });
+    } catch {
+      // User dismissed the native share sheet, or the platform declined — not an error worth surfacing.
     }
   }
 
@@ -295,6 +346,9 @@ export function FriendGamePage() {
     return () => {
       if (copyFeedbackTimerRef.current) {
         clearTimeout(copyFeedbackTimerRef.current);
+      }
+      if (idCopyFeedbackTimerRef.current) {
+        clearTimeout(idCopyFeedbackTimerRef.current);
       }
     };
   }, []);
@@ -336,7 +390,9 @@ export function FriendGamePage() {
       return;
     }
     hasShownEndModal.current = true;
-    setGameEndModal(buildGameEndModalCopy(localColor, game));
+    setGameEndModal(buildGameEndModalCopy(t, localColor, game));
+    // t intentionally omitted: this should run once per finished game, not re-fire on language change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, user, localColor]);
 
   useEffect(() => {
@@ -368,6 +424,9 @@ export function FriendGamePage() {
 
         socketRef.current = io(api.defaults.baseURL as string, {
           auth: { token },
+          // Skip the HTTP long-polling handshake and connect straight over WebSocket —
+          // shaves a round trip off every (re)connect, which matters when the clock is running.
+          transports: ["websocket"],
           reconnection: true,
           reconnectionAttempts: 5,
           reconnectionDelay: 800,
@@ -406,7 +465,7 @@ export function FriendGamePage() {
         socketRef.current.on("connect_error", () => {
           if (mounted) {
             setReconnecting(true);
-            setError("Realtime connection lost. Attempting to reconnect...");
+            setError(t("connection.lost"));
           }
         });
 
@@ -441,11 +500,8 @@ export function FriendGamePage() {
           const statusCode = getApiStatusCode(requestError);
           setError(
             statusCode === 404
-              ? "This game link is invalid or expired."
-              : getApiErrorMessage(
-                  requestError,
-                  "Could not join this game. The link might be invalid or full.",
-                ),
+              ? t("errors.invalidLink")
+              : getApiErrorMessage(requestError, t("errors.joinFailed")),
           );
         }
       } finally {
@@ -462,6 +518,9 @@ export function FriendGamePage() {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
+    // t intentionally omitted: this manages the socket lifecycle and must not
+    // reconnect/rejoin the room just because the UI language changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, token, navigate]);
 
   function emitGameEvent(
@@ -470,7 +529,7 @@ export function FriendGamePage() {
   ) {
     return new Promise<void>((resolve, reject) => {
       if (!gameId || !socketRef.current) {
-        reject(new Error("Game session is unavailable"));
+        reject(new Error(t("errors.sessionUnavailable")));
         return;
       }
 
@@ -480,13 +539,13 @@ export function FriendGamePage() {
           return;
         }
 
-        reject(new Error(ack.message || "Game action failed"));
+        reject(new Error(ack.message || t("errors.moveActionFailed")));
       });
     });
   }
 
   async function handleMove(from: string, to: string, piece: string) {
-    if (acting || !canMove) {
+    if (!game || acting || !canMove) {
       return false;
     }
 
@@ -496,6 +555,30 @@ export function FriendGamePage() {
         ? "q"
         : undefined;
 
+    // Apply the move locally the instant the piece is dropped — otherwise the board
+    // would sit frozen for a full client→server→client round trip (socket emit, DB
+    // write, broadcast back) before showing anything, which reads as "lag" even when
+    // the server is healthy. The server is still authoritative: game:move below is
+    // the real, validated move, and a rejection rolls this optimistic state back.
+    const optimistic = new Chess();
+    try {
+      if (game.pgn) {
+        optimistic.loadPgn(game.pgn);
+      }
+      optimistic.move({ from, to, promotion });
+    } catch {
+      return false; // illegal move — let the board snap the piece back, no round trip needed
+    }
+
+    const previousGame = game;
+    setGame({
+      ...game,
+      fen: optimistic.fen(),
+      pgn: optimistic.pgn(),
+      turn: optimistic.turn(),
+      isCheck: optimistic.isCheck(),
+    });
+
     try {
       setActing(true);
       setMoveHint("");
@@ -504,7 +587,8 @@ export function FriendGamePage() {
       });
       return true;
     } catch (moveError: any) {
-      setMoveHint(moveError.message || "That move wasn't accepted.");
+      setGame(previousGame); // server rejected the move (e.g. a desync) — roll back
+      setMoveHint(moveError.message || t("errors.moveRejected"));
       return false;
     } finally {
       setActing(false);
@@ -524,7 +608,7 @@ export function FriendGamePage() {
       setError("");
       await emitGameEvent(eventName, payload);
     } catch (actionError: any) {
-      setError(actionError.message || "Action failed");
+      setError(actionError.message || t("errors.actionFailed"));
     } finally {
       setActing(false);
     }
@@ -536,18 +620,25 @@ export function FriendGamePage() {
     }
 
     if (game.result) {
-      return `${formatResult(game.result)}${game.terminalReason ? ` by ${game.terminalReason}` : ""}`;
+      const resultLabel = formatResult(game.result, t);
+      if (!game.terminalReason) {
+        return resultLabel;
+      }
+      const reasonLabel = t(`reasons.${reasonTranslationKey(game.terminalReason)}`, {
+        defaultValue: game.terminalReason,
+      });
+      return t("result.withReason", { result: resultLabel, reason: reasonLabel });
     }
 
     if (game.status === "waiting") {
-      return "Waiting for an opponent to join.";
+      return t("turn.waitingForOpponent");
     }
 
     if (canMove) {
-      return game.isCheck ? "Your move. You are in check." : "Your move.";
+      return game.isCheck ? t("turn.yourMoveCheck") : t("turn.yourMove");
     }
 
-    return game.isCheck ? "Opponent to move. They are in check." : "Opponent to move.";
+    return game.isCheck ? t("turn.opponentMoveCheck") : t("turn.opponentMove");
   })();
 
   return (
@@ -560,17 +651,19 @@ export function FriendGamePage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-            <Swords className="h-3.5 w-3.5 text-primary" aria-hidden />
-            Friend match
+            <Swords className="h-3.5 w-3.5 text-[#71808F]" aria-hidden />
+            {t("header.badge")}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Friend game</h1>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">Game ID: {gameId}</p>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("header.title")}</h1>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {t("header.gameId", { id: gameId ?? "" })}
+              </p>
             </div>
             {game ? (
               <Badge variant="outline" className="w-fit capitalize">
-                {game.status}
+                {t(`status.${game.status}`, { defaultValue: game.status })}
               </Badge>
             ) : null}
           </div>
@@ -579,19 +672,19 @@ export function FriendGamePage() {
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Joining game...
+            {t("loading.joining")}
           </div>
         ) : null}
 
         {reconnecting && !loading ? (
           <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
             <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
-            Reconnecting to realtime game updates...
+            {t("connection.reconnecting")}
           </div>
         ) : null}
 
         {error ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
@@ -603,14 +696,21 @@ export function FriendGamePage() {
                 <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
                   <CardContent className="p-4 pt-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      White
+                      {t("clocks.white")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums">
-                      {formatClock(liveClocks.whiteMs)}
+                      <LiveClock
+                        side="w"
+                        status={game.status}
+                        result={game.result}
+                        turn={game.turn}
+                        serverNow={game.serverNow}
+                        clockMs={game.clocks.whiteMs}
+                      />
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       {game.turn === "w" && game.status === "active" && !game.result ? (
-                        <span className="text-primary">Running</span>
+                        <span className="text-primary">{t("clocks.running")}</span>
                       ) : (
                         "—"
                       )}
@@ -620,14 +720,21 @@ export function FriendGamePage() {
                 <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
                   <CardContent className="p-4 pt-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Black
+                      {t("clocks.black")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums">
-                      {formatClock(liveClocks.blackMs)}
+                      <LiveClock
+                        side="b"
+                        status={game.status}
+                        result={game.result}
+                        turn={game.turn}
+                        serverNow={game.serverNow}
+                        clockMs={game.clocks.blackMs}
+                      />
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       {game.turn === "b" && game.status === "active" && !game.result ? (
-                        <span className="text-primary">Running</span>
+                        <span className="text-primary">{t("clocks.running")}</span>
                       ) : (
                         "—"
                       )}
@@ -640,20 +747,20 @@ export function FriendGamePage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Users className="h-4 w-4 text-primary" aria-hidden />
-                    Players
+                    {t("players.title")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">White</span>
+                    <span className="text-muted-foreground">{t("players.white")}</span>
                     <span className="font-medium">
-                      {game.players.white?.username ?? "Waiting..."}
+                      {game.players.white?.username ?? t("players.waitingPlaceholder")}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Black</span>
+                    <span className="text-muted-foreground">{t("players.black")}</span>
                     <span className="font-medium">
-                      {game.players.black?.username ?? "Waiting..."}
+                      {game.players.black?.username ?? t("players.waitingPlaceholder")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 border-t border-border pt-3 text-muted-foreground">
@@ -665,12 +772,15 @@ export function FriendGamePage() {
                   </p>
                   {game.result ? (
                     <p className="text-sm text-muted-foreground">
-                      Result: <span className="font-medium text-foreground">{formatResult(game.result)}</span>
+                      {t("players.resultLabel")}{" "}
+                      <span className="font-medium text-foreground">{formatResult(game.result, t)}</span>
                     </p>
                   ) : null}
                   {game.drawOfferBy ? (
                     <p className="rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
-                      Draw offer pending from {game.drawOfferBy === "w" ? "White" : "Black"}.
+                      {t("players.drawOfferPending", {
+                        color: game.drawOfferBy === "w" ? t("players.white") : t("players.black"),
+                      })}
                     </p>
                   ) : null}
                 </CardContent>
@@ -681,35 +791,71 @@ export function FriendGamePage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Share2 className="h-4 w-4 text-primary" aria-hidden />
-                      Invite link
+                      {t("invite.title")}
                     </CardTitle>
-                    <CardDescription>Share this URL with your opponent.</CardDescription>
+                    <CardDescription>{t("invite.description")}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">{t("invite.linkLabel")}</p>
+                      <div
+                        className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2.5"
+                        title={shareLink}
+                      >
+                        <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+                          {shareLink}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value={shareLink}
-                        className="min-w-0 flex-1 font-mono text-xs"
-                        aria-label="Game invite URL"
-                      />
                       <Button
                         type="button"
-                        variant="secondary"
-                        className="shrink-0 px-3"
+                        className="flex-1 gap-2"
                         onClick={() => void handleCopyInviteLink()}
-                        aria-label={linkCopied ? "Copied" : "Copy invite link"}
+                        aria-label={linkCopied ? t("invite.copiedAriaLabel") : t("invite.copyAriaLabel")}
                       >
                         {linkCopied ? (
-                          <Check className="h-4 w-4 text-accent" aria-hidden />
+                          <Check className="h-4 w-4" aria-hidden />
                         ) : (
                           <Copy className="h-4 w-4" aria-hidden />
                         )}
+                        {linkCopied ? t("invite.copiedButton") : t("invite.copyButton")}
                       </Button>
+                      {canNativeShare ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="shrink-0 px-3"
+                          onClick={() => void handleShareInvite()}
+                          aria-label={t("invite.shareButton")}
+                        >
+                          <Share2 className="h-4 w-4" aria-hidden />
+                        </Button>
+                      ) : null}
                     </div>
-                    {linkCopied ? (
-                      <p className="mt-2 text-xs text-muted-foreground">Copied to clipboard.</p>
-                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyGameId()}
+                      aria-label={idCopied ? t("invite.copiedAriaLabel") : t("invite.copyGameIdAriaLabel")}
+                      className="flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                    >
+                      <span className="min-w-0 truncate">
+                        {t("invite.gameIdLabel")}: <span className="font-mono text-foreground">{gameId}</span>
+                      </span>
+                      {idCopied ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
+                      {t("invite.waitingHint")}
+                    </div>
                   </CardContent>
                 </Card>
               ) : null}
@@ -722,6 +868,8 @@ export function FriendGamePage() {
                     options={{
                       position: game.fen,
                       boardOrientation: localColor === "b" ? "black" : "white",
+                      lightSquareStyle,
+                      darkSquareStyle,
                       allowDragging: canMove && !acting,
                       onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
                         if (!sourceSquare || !targetSquare) {
@@ -741,7 +889,7 @@ export function FriendGamePage() {
                   role="alert"
                   className="rounded-lg border border-amber-500/45 bg-amber-950/45 px-4 py-3 text-sm shadow-sm"
                 >
-                  <p className="m-0 font-medium text-amber-200">Move not allowed</p>
+                  <p className="m-0 font-medium text-amber-200">{t("moveHint.title")}</p>
                   <p className="mt-2 m-0 leading-relaxed text-amber-100/95">{moveHint}</p>
                 </div>
               ) : null}
@@ -750,18 +898,18 @@ export function FriendGamePage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Timer className="h-4 w-4 text-muted-foreground" aria-hidden />
-                    Actions
+                    {t("actions.title")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="secondary"
-                    className="border border-red-500/30 bg-red-950/30 text-red-300 hover:bg-red-950/50"
+                    className="border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
                     disabled={acting || game.status !== "active" || Boolean(game.result)}
                     onClick={() => handleAction("game:resign")}
                   >
-                    Resign
+                    {t("actions.resign")}
                   </Button>
                   <Button
                     type="button"
@@ -774,7 +922,7 @@ export function FriendGamePage() {
                     }
                     onClick={() => handleAction("game:draw-offer")}
                   >
-                    Offer draw
+                    {t("actions.offerDraw")}
                   </Button>
                   {drawOfferForPlayer ? (
                     <>
@@ -784,7 +932,7 @@ export function FriendGamePage() {
                         disabled={acting}
                         onClick={() => handleAction("game:draw-response", { accept: true })}
                       >
-                        Accept draw
+                        {t("actions.acceptDraw")}
                       </Button>
                       <Button
                         type="button"
@@ -792,7 +940,7 @@ export function FriendGamePage() {
                         disabled={acting}
                         onClick={() => handleAction("game:draw-response", { accept: false })}
                       >
-                        Decline draw
+                        {t("actions.declineDraw")}
                       </Button>
                     </>
                   ) : null}
@@ -805,7 +953,7 @@ export function FriendGamePage() {
 
       {gameEndModal ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="game-end-title"
@@ -813,24 +961,8 @@ export function FriendGamePage() {
         >
           <Card className="w-full max-w-md border-border/80 bg-card shadow-2xl">
             <CardHeader className="space-y-3 text-center sm:text-left">
-              <div className="flex justify-center sm:justify-start">
-                <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                    gameEndModal.kind === "win"
-                      ? "bg-primary/15 text-primary"
-                      : gameEndModal.kind === "draw"
-                        ? "bg-secondary text-muted-foreground"
-                        : "bg-red-950/50 text-red-300"
-                  }`}
-                >
-                  {gameEndModal.kind === "win" ? (
-                    <Trophy className="h-6 w-6" aria-hidden />
-                  ) : gameEndModal.kind === "draw" ? (
-                    <Equal className="h-6 w-6" aria-hidden />
-                  ) : (
-                    <AlertCircle className="h-6 w-6" aria-hidden />
-                  )}
-                </span>
+              <div className="flex justify-center text-5xl sm:justify-start" aria-hidden>
+                {GAME_END_STICKERS[gameEndModal.kind]}
               </div>
               <CardTitle id="game-end-title" className="text-2xl">
                 {gameEndModal.title}
@@ -844,14 +976,14 @@ export function FriendGamePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-center text-xs text-muted-foreground sm:text-left">
-                Returning to your dashboard in 5 seconds…
+                {t("endModal.returning")}
               </p>
               <Button
                 type="button"
                 className="w-full"
                 onClick={() => navigate("/dashboard", { replace: true })}
               >
-                Back to dashboard
+                {t("endModal.backToDashboard")}
               </Button>
             </CardContent>
           </Card>

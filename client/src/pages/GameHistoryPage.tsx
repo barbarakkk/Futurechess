@@ -11,6 +11,7 @@ import {
   Target,
   Trash2,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
@@ -60,22 +61,32 @@ function formatWhen(iso: string | null) {
 }
 
 function OutcomeBadge({ outcome }: { outcome: HistoryOutcome }) {
+  const { t } = useTranslation("gameHistory");
   if (outcome === "win") {
-    return <Badge className="bg-emerald-600/25 text-emerald-200 hover:bg-emerald-600/30">Win</Badge>;
+    return (
+      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+        {t("outcome.win")}
+      </Badge>
+    );
   }
   if (outcome === "loss") {
-    return <Badge className="bg-red-600/20 text-red-200 hover:bg-red-600/25">Loss</Badge>;
+    return (
+      <Badge className="bg-red-100 text-red-700 hover:bg-red-200">
+        {t("outcome.loss")}
+      </Badge>
+    );
   }
   if (outcome === "draw") {
-    return <Badge variant="secondary">Draw</Badge>;
+    return <Badge variant="secondary">{t("outcome.draw")}</Badge>;
   }
   if (outcome === "waiting") {
-    return <Badge variant="outline">Waiting</Badge>;
+    return <Badge variant="outline">{t("outcome.waiting")}</Badge>;
   }
-  return <Badge variant="outline">In progress</Badge>;
+  return <Badge variant="outline">{t("outcome.inProgress")}</Badge>;
 }
 
 export function GameHistoryPage() {
+  const { t } = useTranslation("gameHistory");
   const [games, setGames] = useState<HistoryGame[]>([]);
   const [summary, setSummary] = useState<HistorySummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +114,7 @@ export function GameHistoryPage() {
         }
       } catch (requestError: any) {
         if (mounted) {
-          setError(getApiErrorMessage(requestError, "Could not load game history."));
+          setError(getApiErrorMessage(requestError, t("errors.loadFailed")));
         }
       } finally {
         if (mounted) {
@@ -146,7 +157,7 @@ export function GameHistoryPage() {
       setPendingDelete(null);
       await refreshHistory();
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Could not remove this game from your history."));
+      setError(getApiErrorMessage(requestError, t("errors.deleteFailed")));
     } finally {
       setDeletingId(null);
     }
@@ -171,23 +182,21 @@ export function GameHistoryPage() {
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-            Friend games
+            {t("badge")}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary">
               <History className="h-6 w-6 text-primary" aria-hidden />
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Game history</h1>
-              <p className="text-sm text-muted-foreground">
-                Your results against opponents in real-time friend games.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("title")}</h1>
+              <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
             </div>
           </div>
         </header>
 
         {error ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
@@ -195,7 +204,7 @@ export function GameHistoryPage() {
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Loading history…
+            {t("loading")}
           </div>
         ) : null}
 
@@ -204,38 +213,46 @@ export function GameHistoryPage() {
             <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
-                  <Swords className="h-3.5 w-3.5" aria-hidden />
-                  Record
+                  <Swords className="h-3.5 w-3.5 text-[#71808F]" aria-hidden />
+                  {t("stats.record")}
                 </CardDescription>
                 <CardTitle className="text-2xl font-bold tabular-nums">
-                  {summary.wins}W — {summary.losses}L — {summary.draws}D
+                  {t("stats.recordValue", {
+                    wins: summary.wins,
+                    losses: summary.losses,
+                    draws: summary.draws,
+                  })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 text-xs text-muted-foreground">
-                {completed} finished
-                {summary.ongoing > 0 ? ` · ${summary.ongoing} open` : null}
+                {t("stats.finished", { count: completed })}
+                {summary.ongoing > 0
+                  ? ` · ${t("stats.open", { count: summary.ongoing })}`
+                  : null}
               </CardContent>
             </Card>
             <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
                   <Target className="h-3.5 w-3.5" aria-hidden />
-                  Win rate
+                  {t("stats.winRate")}
                 </CardDescription>
                 <CardTitle className="text-2xl font-bold tabular-nums">
-                  {completed > 0 ? `${winRate}%` : "—"}
+                  {completed > 0
+                    ? t("stats.winRateValue", { rate: winRate })
+                    : t("stats.winRateEmpty")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 text-xs text-muted-foreground">
-                From completed friend games
+                {t("stats.winRateSubtitle")}
               </CardContent>
             </Card>
             <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs font-medium uppercase tracking-wide">
-                  Wins
+                  {t("stats.wins")}
                 </CardDescription>
-                <CardTitle className="text-2xl font-bold tabular-nums text-emerald-200/90">
+                <CardTitle className="text-2xl font-bold tabular-nums text-emerald-600">
                   {summary.wins}
                 </CardTitle>
               </CardHeader>
@@ -243,9 +260,9 @@ export function GameHistoryPage() {
             <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs font-medium uppercase tracking-wide">
-                  Losses
+                  {t("stats.losses")}
                 </CardDescription>
-                <CardTitle className="text-2xl font-bold tabular-nums text-red-200/90">
+                <CardTitle className="text-2xl font-bold tabular-nums text-red-600">
                   {summary.losses}
                 </CardTitle>
               </CardHeader>
@@ -257,7 +274,7 @@ export function GameHistoryPage() {
           <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
               <Minus className="mx-auto mb-2 h-8 w-8 opacity-50" aria-hidden />
-              No friend games yet. Create a game from the menu and share the link.
+              {t("empty")}
             </CardContent>
           </Card>
         ) : null}
@@ -265,24 +282,27 @@ export function GameHistoryPage() {
         {!loading && games.length > 0 ? (
           <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-lg">All games</CardTitle>
+              <CardTitle className="text-lg">{t("table.title")}</CardTitle>
               <CardDescription>
-                Newest first. Open to review the board, or remove a finished or waiting game from{" "}
-                <strong className="font-medium text-foreground">your</strong> history only — your
-                opponent&apos;s list is unchanged (finished or waiting games only — not games still in
-                progress).
+                <Trans
+                  t={t}
+                  i18nKey="table.description"
+                  components={{
+                    1: <strong className="font-medium text-foreground" />,
+                  }}
+                />
               </CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0 sm:p-6 sm:pt-0">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-border text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-3 sm:px-0">Date</th>
-                    <th className="px-4 py-3 sm:px-0">Opponent</th>
-                    <th className="px-4 py-3 sm:px-0">You</th>
-                    <th className="px-4 py-3 sm:px-0">Clock</th>
-                    <th className="px-4 py-3 sm:px-0">Result</th>
-                    <th className="px-4 py-3 sm:px-0">Actions</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.date")}</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.opponent")}</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.you")}</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.clock")}</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.result")}</th>
+                    <th className="px-4 py-3 sm:px-0">{t("table.columns.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -298,12 +318,12 @@ export function GameHistoryPage() {
                         {g.opponent?.username ?? "—"}
                         {g.outcome === "waiting" ? (
                           <span className="ml-1 text-xs font-normal text-muted-foreground">
-                            (not joined)
+                            {t("table.notJoined")}
                           </span>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 align-middle capitalize text-muted-foreground sm:px-0">
-                        {g.yourColor}
+                        {t(`color.${g.yourColor}`)}
                       </td>
                       <td className="px-4 py-3 align-middle sm:px-0">{g.timeControl}</td>
                       <td className="px-4 py-3 align-middle sm:px-0">
@@ -315,24 +335,24 @@ export function GameHistoryPage() {
                             to={`/game/${g.id}`}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium text-primary hover:bg-secondary hover:text-primary"
                           >
-                            Open
+                            {t("table.open")}
                             <ChevronRight className="h-4 w-4" aria-hidden />
                           </Link>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 gap-1 text-red-400 hover:bg-red-950/40 hover:text-red-300 disabled:opacity-40"
+                            className="h-8 gap-1 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
                             disabled={
                               deletingId === g.id ||
                               g.outcome === "ongoing"
                             }
                             title={
                               g.outcome === "ongoing"
-                                ? "Finish or resign before you can remove this game from your history."
-                                : "Remove this game from your history only (your opponent still sees it)"
+                                ? t("table.removeTitleOngoing")
+                                : t("table.removeTitle")
                             }
-                            aria-label={`Remove game ${g.id} from your history`}
+                            aria-label={t("table.removeAriaLabel", { id: g.id })}
                             onClick={() => openDeleteConfirm(g)}
                           >
                             {deletingId === g.id ? (
@@ -340,7 +360,7 @@ export function GameHistoryPage() {
                             ) : (
                               <Trash2 className="h-4 w-4" aria-hidden />
                             )}
-                            Remove
+                            {t("table.remove")}
                           </Button>
                         </div>
                       </td>
@@ -355,7 +375,7 @@ export function GameHistoryPage() {
 
       {pendingDelete ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget && !deletingId) {
@@ -373,20 +393,24 @@ export function GameHistoryPage() {
           >
             <CardHeader className="space-y-3">
               <div className="flex justify-center sm:justify-start">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-950/50 text-red-300">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
                   <AlertTriangle className="h-6 w-6" aria-hidden />
                 </span>
               </div>
               <CardTitle id="delete-game-title" className="text-xl">
-                Remove from your history?
+                {t("deleteDialog.title")}
               </CardTitle>
               <CardDescription
                 id="delete-game-desc"
                 className="text-base leading-relaxed text-foreground/90"
               >
-                This removes the match from <strong className="font-semibold text-foreground">your</strong>{" "}
-                history only. Your opponent&apos;s history, stats, and saved game data are not affected.
-                You won&apos;t be able to restore it to your list later.
+                <Trans
+                  t={t}
+                  i18nKey="deleteDialog.description"
+                  components={{
+                    1: <strong className="font-semibold text-foreground" />,
+                  }}
+                />
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
@@ -397,7 +421,7 @@ export function GameHistoryPage() {
                 disabled={Boolean(deletingId)}
                 onClick={closeDeleteConfirm}
               >
-                Cancel
+                {t("deleteDialog.cancel")}
               </Button>
               <Button
                 type="button"
@@ -408,12 +432,12 @@ export function GameHistoryPage() {
                 {deletingId === pendingDelete.id ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    Removing…
+                    {t("deleteDialog.removing")}
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                    Remove from my history
+                    {t("deleteDialog.confirm")}
                   </>
                 )}
               </Button>

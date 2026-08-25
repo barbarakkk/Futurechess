@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Crown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -13,6 +14,8 @@ import {
 import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
+import { getSafeRedirect } from "../lib/redirect";
+import { hydratePreferencesFromServer } from "../components/PreferencesHydrator";
 import { useAuthStore, type AuthUser } from "../store/authStore";
 
 type LoginForm = {
@@ -21,7 +24,10 @@ type LoginForm = {
 };
 
 export function LoginPage() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = getSafeRedirect(searchParams.get("redirect"));
   const setAuth = useAuthStore((state) => state.setAuth);
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -36,9 +42,10 @@ export function LoginPage() {
       const response = await api.post("/auth/login", form);
       const payload = response.data as { token: string; user: AuthUser };
       setAuth(payload.token, payload.user);
-      navigate("/dashboard");
+      await hydratePreferencesFromServer().catch(() => {});
+      navigate(redirectTo || "/dashboard");
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Login failed"));
+      setError(getApiErrorMessage(requestError, t("login.loginFailed")));
     } finally {
       setLoading(false);
     }
@@ -57,26 +64,26 @@ export function LoginPage() {
             className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:opacity-90"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-              <Crown className="h-5 w-5 text-primary" aria-hidden />
+              <Crown className="h-5 w-5 text-[#D4AF37]" aria-hidden />
             </span>
-            ChessHub
+            FutureChess
           </Link>
         </div>
 
-        <Card className="border-border/80 shadow-lg shadow-black/20">
+        <Card className="border-border/80 shadow-soft">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              Welcome back
+              {t("login.title")}
             </CardTitle>
             <CardDescription>
-              Sign in with your email and password to continue.
+              {t("login.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="login-email" className="text-sm font-medium">
-                  Email
+                  {t("email")}
                 </label>
                 <Input
                   id="login-email"
@@ -90,9 +97,17 @@ export function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="login-password" className="text-sm font-medium">
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="login-password" className="text-sm font-medium">
+                    {t("password")}
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("forgotPassword.link")}
+                  </Link>
+                </div>
                 <Input
                   id="login-password"
                   type="password"
@@ -109,20 +124,23 @@ export function LoginPage() {
               </div>
 
               {error ? (
-                <p className="text-sm text-red-400" role="alert">
+                <p className="text-sm text-red-600" role="alert">
                   {error}
                 </p>
               ) : null}
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? t("login.signingIn") : t("signIn")}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              New here?{" "}
-              <Link to="/register" className="font-medium text-primary hover:underline">
-                Create account
+              {t("login.newHere")}{" "}
+              <Link
+                to={redirectTo ? `/register?redirect=${encodeURIComponent(redirectTo)}` : "/register"}
+                className="font-medium text-primary hover:underline"
+              >
+                {t("createAccount")}
               </Link>
             </p>
           </CardContent>

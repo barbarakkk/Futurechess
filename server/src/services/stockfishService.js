@@ -11,7 +11,33 @@ function getSearchDepth(difficulty) {
   return DIFFICULTY_TO_DEPTH[difficulty] ?? DIFFICULTY_TO_DEPTH.medium;
 }
 
-function runStockfishCommand({ fen, difficulty }) {
+// Each search spawns a Stockfish (WASM) process that briefly pins a CPU core and a
+// chunk of RAM. On a single small instance, letting an unbounded number run at once
+// can exhaust the box and take the friend-game socket server down with it. So we cap
+// how many run concurrently and queue the rest (FIFO). Tune with STOCKFISH_MAX_CONCURRENCY.
+const MAX_CONCURRENCY = Math.max(1, Number(process.env.STOCKFISH_MAX_CONCURRENCY) || 2);
+let activeSearches = 0;
+const waiters = [];
+
+function acquireSlot() {
+  if (activeSearches < MAX_CONCURRENCY) {
+    activeSearches += 1;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => waiters.push(resolve));
+}
+
+function releaseSlot() {
+  const next = waiters.shift();
+  if (next) {
+    // Hand the slot straight to the next waiter — activeSearches stays constant.
+    next();
+  } else {
+    activeSearches -= 1;
+  }
+}
+
+function spawnStockfishSearch({ fen, difficulty }) {
   return new Promise((resolve, reject) => {
     const enginePath = require.resolve("stockfish/scripts/cli.js");
     const child = spawn(process.execPath, [enginePath], {
@@ -97,6 +123,15 @@ function runStockfishCommand({ fen, difficulty }) {
     child.stdin.write(`position fen ${fen}\n`);
     child.stdin.write(`go depth ${depth}\n`);
   });
+}
+
+async function runStockfishCommand({ fen, difficulty }) {
+  await acquireSlot();
+  try {
+    return await spawnStockfishSearch({ fen, difficulty });
+  } finally {
+    releaseSlot();
+  }
 }
 
 module.exports = {

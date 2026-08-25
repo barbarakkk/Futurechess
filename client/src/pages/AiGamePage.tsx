@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
   ChevronRight,
@@ -10,6 +11,8 @@ import {
   Timer,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -20,6 +23,7 @@ import {
 } from "../components/ui/card";
 import { api } from "../lib/api";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
+import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
 
 type Difficulty = "easy" | "medium" | "hard";
@@ -49,23 +53,67 @@ type AiGameState = {
   lastMove: AiMove | null;
 };
 
-function formatResult(result: string | null) {
+function formatResult(result: string | null, t: TFunction) {
   switch (result) {
     case "1-0":
-      return "White won";
+      return t("play.results.white");
     case "0-1":
-      return "Black won";
+      return t("play.results.black");
     case "1/2-1/2":
-      return "Draw";
+      return t("play.results.draw");
     default:
-      return "In progress";
+      return t("play.results.inProgress");
   }
 }
 
+type GameEndModalCopy = { title: string; body: string; kind: "win" | "loss" | "draw" };
+
+// AI games have no "resign"/"timeout" mechanic (HTTP-only, no clocks) — the only endings are
+// checkmate or a chess-rules draw, so this is simpler than FriendGamePage's equivalent.
+function buildAiGameEndModalCopy(t: TFunction, userColor: UserColor, game: AiGameState): GameEndModalCopy {
+  if (game.result === "1/2-1/2") {
+    return { title: t("endModal.draw.title"), body: t("endModal.draw.body"), kind: "draw" };
+  }
+
+  const youWon = (userColor === "white" && game.result === "1-0") || (userColor === "black" && game.result === "0-1");
+
+  let isCheckmate = false;
+  try {
+    const chess = new Chess();
+    if (game.pgn) chess.loadPgn(game.pgn);
+    isCheckmate = chess.isCheckmate();
+  } catch {
+    // Fall through to the generic copy below.
+  }
+
+  if (youWon) {
+    return {
+      title: t("endModal.win.title"),
+      body: isCheckmate ? t("endModal.win.checkmate") : t("endModal.win.generic"),
+      kind: "win",
+    };
+  }
+
+  return {
+    title: t("endModal.loss.title"),
+    body: isCheckmate ? t("endModal.loss.checkmate") : t("endModal.loss.generic"),
+    kind: "loss",
+  };
+}
+
+// Bigger, more playful than an icon — matches how FriendGamePage's end-of-game modal reads.
+const GAME_END_STICKERS: Record<GameEndModalCopy["kind"], string> = {
+  win: "🏆",
+  loss: "😢",
+  draw: "🤝",
+};
+
 export function AiGamePage() {
+  const { t } = useTranslation("aiGame");
   const navigate = useNavigate();
   const { gameId } = useParams();
   const user = useAuthStore((state) => state.user);
+  const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [userColor, setUserColor] = useState<ColorChoice>("white");
   const [game, setGame] = useState<AiGameState | null>(null);
@@ -74,6 +122,8 @@ export function AiGamePage() {
   const [acting, setActing] = useState(false);
   const [error, setError] = useState("");
   const [lastAction, setLastAction] = useState("");
+  const hasShownEndModal = useRef(false);
+  const [gameEndModal, setGameEndModal] = useState<GameEndModalCopy | null>(null);
 
   const isCreateMode = gameId === "new" || !gameId;
   const playerTurn = game?.turn === (game?.userColor === "white" ? "w" : "b");
@@ -84,11 +134,11 @@ export function AiGamePage() {
     }
 
     if (game.result) {
-      return `Game finished: ${formatResult(game.result)}`;
+      return t("play.match.finished", { result: formatResult(game.result, t) });
     }
 
-    return playerTurn ? "Your move." : "Stockfish is to move.";
-  }, [game, playerTurn]);
+    return playerTurn ? t("play.match.yourTurn") : t("play.match.aiTurn");
+  }, [game, playerTurn, t]);
 
   useEffect(() => {
     if (isCreateMode || !gameId) {
@@ -112,11 +162,8 @@ export function AiGamePage() {
           const statusCode = getApiStatusCode(requestError);
           setError(
             statusCode === 404
-              ? "This AI game link is invalid or expired."
-              : getApiErrorMessage(
-                  requestError,
-                  "Could not load AI game. It may not exist.",
-                ),
+              ? t("play.notFoundError")
+              : getApiErrorMessage(requestError, t("play.loadError")),
           );
         }
       } finally {
@@ -131,7 +178,35 @@ export function AiGamePage() {
     return () => {
       mounted = false;
     };
-  }, [gameId, isCreateMode]);
+  }, [gameId, isCreateMode, t]);
+
+  useEffect(() => {
+    hasShownEndModal.current = false;
+    setGameEndModal(null);
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!game || game.status !== "finished" || !game.result) {
+      return;
+    }
+    if (hasShownEndModal.current) {
+      return;
+    }
+    hasShownEndModal.current = true;
+    setGameEndModal(buildAiGameEndModalCopy(t, game.userColor, game));
+    // t intentionally omitted: this should run once per finished game, not re-fire on language change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
+
+  useEffect(() => {
+    if (!gameEndModal) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      navigate("/dashboard", { replace: true });
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [gameEndModal, navigate]);
 
   async function handleCreateGame() {
     try {
@@ -150,7 +225,7 @@ export function AiGamePage() {
       const createdGame = response.data.game as AiGameState;
       navigate(`/ai-game/${createdGame.id}`);
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Could not create AI game."));
+      setError(getApiErrorMessage(requestError, t("setup.createError")));
     } finally {
       setCreating(false);
     }
@@ -168,6 +243,28 @@ export function AiGamePage() {
           ? "q"
           : undefined;
 
+    // Apply the move locally first so the board updates the instant the piece is
+    // dropped — otherwise it would wait for the server response, which only comes
+    // back after Stockfish has finished thinking. chess.js enforces the same rules
+    // the server does; the server response below is still authoritative.
+    const optimistic = new Chess();
+    try {
+      if (game.pgn) {
+        optimistic.loadPgn(game.pgn);
+      }
+      optimistic.move({ from, to, promotion });
+    } catch {
+      return false; // illegal move — let the board snap the piece back
+    }
+
+    const previousGame = game;
+    setGame({
+      ...game,
+      fen: optimistic.fen(),
+      pgn: optimistic.pgn(),
+      turn: optimistic.turn(),
+    });
+
     try {
       setActing(true);
       setError("");
@@ -179,10 +276,15 @@ export function AiGamePage() {
       const nextGame = response.data.game as AiGameState;
       const aiMove = response.data.aiMove as AiMove | null;
       setGame(nextGame);
-      setLastAction(aiMove ? `Stockfish played ${aiMove.san}` : "No AI reply move.");
+      setLastAction(
+        aiMove
+          ? t("play.match.aiPlayed", { san: aiMove.san })
+          : t("play.match.noAiReply"),
+      );
       return true;
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Move was rejected."));
+      setGame(previousGame); // server rejected — roll back the optimistic move
+      setError(getApiErrorMessage(requestError, t("play.moveRejectedError")));
       return false;
     } finally {
       setActing(false);
@@ -201,18 +303,16 @@ export function AiGamePage() {
           <header className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
               <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
-              AI opponent
+              {t("setup.badge")}
             </div>
             <div className="space-y-2">
               <h1 className="flex flex-wrap items-center gap-2 text-3xl font-bold tracking-tight md:text-4xl">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
                   <Cpu className="h-5 w-5 text-accent" aria-hidden />
                 </span>
-                New AI game
+                {t("setup.title")}
               </h1>
-              <p className="text-muted-foreground">
-                Tune Stockfish strength and pick your side — one click to open the board.
-              </p>
+              <p className="text-muted-foreground">{t("setup.subtitle")}</p>
             </div>
           </header>
 
@@ -220,20 +320,15 @@ export function AiGamePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Gauge className="h-5 w-5 text-primary" aria-hidden />
-                Difficulty
+                {t("setup.difficulty.title")}
               </CardTitle>
-              <CardDescription>Select how aggressively Stockfish will search.</CardDescription>
+              <CardDescription>{t("setup.difficulty.description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {(["easy", "medium", "hard"] as Difficulty[]).map((level) => {
                 const selected = difficulty === level;
-                const label = level.charAt(0).toUpperCase() + level.slice(1);
-                const hint =
-                  level === "easy"
-                    ? "Perfect for beginners"
-                    : level === "medium"
-                      ? "A balanced challenge"
-                      : "For experienced players";
+                const label = t(`setup.difficulty.${level}.label`);
+                const hint = t(`setup.difficulty.${level}.hint`);
                 return (
                   <button
                     key={level}
@@ -241,7 +336,7 @@ export function AiGamePage() {
                     onClick={() => setDifficulty(level)}
                     className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
                       selected
-                        ? "border-accent bg-accent/10 shadow-[0_0_0_1px_hsl(168_85%_33%_/_0.35)]"
+                        ? "border-accent bg-accent/10 shadow-[0_0_0_1px_hsl(199_89%_48%_/_0.35)]"
                         : "border-border bg-background/50 hover:border-border hover:bg-secondary/60"
                     }`}
                   >
@@ -263,21 +358,16 @@ export function AiGamePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Palette className="h-5 w-5 text-primary" aria-hidden />
-                Your color
+                {t("setup.color.title")}
               </CardTitle>
-              <CardDescription>White moves first; as Black, Stockfish opens.</CardDescription>
+              <CardDescription>{t("setup.color.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-2 sm:grid-cols-3">
                 {(["white", "black", "random"] as ColorChoice[]).map((choice) => {
                   const selected = userColor === choice;
-                  const label = choice.charAt(0).toUpperCase() + choice.slice(1);
-                  const hint =
-                    choice === "white"
-                      ? "Play first"
-                      : choice === "black"
-                        ? "AI plays first"
-                        : "Surprise me";
+                  const label = t(`setup.color.${choice}.label`);
+                  const hint = t(`setup.color.${choice}.hint`);
                   return (
                     <button
                       key={choice}
@@ -285,7 +375,7 @@ export function AiGamePage() {
                       onClick={() => setUserColor(choice)}
                       className={`rounded-xl border px-4 py-3 text-left transition ${
                         selected
-                          ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(204_94%_54%_/_0.35)]"
+                          ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(211_100%_50%_/_0.35)]"
                           : "border-border bg-background/50 hover:border-border hover:bg-secondary/60"
                       }`}
                     >
@@ -299,7 +389,7 @@ export function AiGamePage() {
           </Card>
 
           {error ? (
-            <p className="text-sm text-red-400" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
@@ -311,7 +401,7 @@ export function AiGamePage() {
             disabled={creating}
             onClick={handleCreateGame}
           >
-            {creating ? "Creating AI game…" : "Start AI game"}
+            {creating ? t("setup.startingButton") : t("setup.startButton")}
           </Button>
         </section>
       </div>
@@ -329,7 +419,7 @@ export function AiGamePage() {
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
-            AI game
+            {t("play.badge")}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -337,9 +427,11 @@ export function AiGamePage() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary">
                   <Cpu className="h-5 w-5 text-accent" aria-hidden />
                 </span>
-                vs Stockfish
+                {t("play.title")}
               </h1>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">Game ID: {gameId}</p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {t("play.gameId", { id: gameId })}
+              </p>
             </div>
           </div>
         </header>
@@ -347,12 +439,12 @@ export function AiGamePage() {
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Loading AI game...
+            {t("play.loading")}
           </div>
         ) : null}
 
         {error ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
@@ -361,27 +453,34 @@ export function AiGamePage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start">
             <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Match</CardTitle>
-                <CardDescription>Engine-backed — moves sync when you release a piece.</CardDescription>
+                <CardTitle className="text-base">{t("play.match.title")}</CardTitle>
+                <CardDescription>{t("play.match.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">You</span>
+                  <span className="text-muted-foreground">{t("play.match.you")}</span>
                   <span className="font-medium">
-                    {user?.username ?? "You"} ({game.userColor})
+                    {user?.username ?? t("play.match.you")} (
+                    {t(`setup.color.${game.userColor}.label`)})
                   </span>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Opponent</span>
-                  <span className="font-medium capitalize">Stockfish ({game.difficulty})</span>
+                  <span className="text-muted-foreground">{t("play.match.opponent")}</span>
+                  <span className="font-medium">
+                    {t("play.match.opponentName", {
+                      difficulty: t(`setup.difficulty.${game.difficulty}.label`),
+                    })}
+                  </span>
                 </div>
                 <div className="flex items-start gap-2 border-t border-border pt-3">
                   <Timer className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                   <span>{statusText}</span>
                 </div>
                 <p className="border-t border-border pt-3 text-muted-foreground">
-                  Result:{" "}
-                  <span className="font-medium text-foreground">{formatResult(game.result)}</span>
+                  {t("play.match.result")}{" "}
+                  <span className="font-medium text-foreground">
+                    {formatResult(game.result, t)}
+                  </span>
                 </p>
                 {lastAction ? (
                   <p className="rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
@@ -397,6 +496,8 @@ export function AiGamePage() {
                   options={{
                     position: game.fen,
                     boardOrientation: game.userColor === "black" ? "black" : "white",
+                    lightSquareStyle,
+                    darkSquareStyle,
                     allowDragging: !acting && !game.result && playerTurn,
                     onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
                       if (!sourceSquare || !targetSquare) {
@@ -413,6 +514,45 @@ export function AiGamePage() {
           </div>
         ) : null}
       </div>
+
+      {gameEndModal ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ai-game-end-title"
+          aria-describedby="ai-game-end-desc"
+        >
+          <Card className="w-full max-w-md border-border/80 bg-card shadow-2xl">
+            <CardHeader className="space-y-3 text-center sm:text-left">
+              <div className="flex justify-center text-5xl sm:justify-start" aria-hidden>
+                {GAME_END_STICKERS[gameEndModal.kind]}
+              </div>
+              <CardTitle id="ai-game-end-title" className="text-2xl">
+                {gameEndModal.title}
+              </CardTitle>
+              <CardDescription
+                id="ai-game-end-desc"
+                className="text-base leading-relaxed text-foreground/90"
+              >
+                {gameEndModal.body}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-xs text-muted-foreground sm:text-left">
+                {t("endModal.returning")}
+              </p>
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => navigate("/dashboard", { replace: true })}
+              >
+                {t("endModal.backToDashboard")}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }

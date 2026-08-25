@@ -6,6 +6,8 @@ const { requireAuth } = require("../middleware/auth");
 const { generateUniqueInviteCode } = require("../utils/inviteCode");
 const { signAccessToken } = require("../utils/jwt");
 const { createHttpError } = require("../utils/createHttpError");
+const { generatePasswordResetToken, hashResetToken } = require("../utils/passwordResetToken");
+const { sendPasswordResetEmail } = require("../services/emailService");
 
 const router = Router();
 
@@ -20,6 +22,15 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(72),
+});
+
 function toAuthResponse(user) {
   const token = signAccessToken({ sub: user.id });
 
@@ -30,6 +41,7 @@ function toAuthResponse(user) {
       username: user.username,
       email: user.email,
       userCode: user.userCode,
+      role: user.role,
       createdAt: user.createdAt,
     },
   };
@@ -65,6 +77,7 @@ router.post("/register", async (req, res, next) => {
         username: true,
         email: true,
         userCode: true,
+        role: true,
         createdAt: true,
       },
     });
@@ -99,6 +112,7 @@ router.post("/login", async (req, res, next) => {
         username: user.username,
         email: user.email,
         userCode: user.userCode,
+        role: user.role,
         createdAt: user.createdAt,
       }),
     );
@@ -109,6 +123,63 @@ router.post("/login", async (req, res, next) => {
 
 router.get("/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
+});
+
+// Generic response used by /forgot-password whether or not the email is registered —
+// the message text must never differ, or the endpoint becomes an email-enumeration oracle.
+const FORGOT_PASSWORD_MESSAGE = "If that email is registered, we've sent a password reset link.";
+
+/** Public, tokenized-link flow (same mental model as coach-booking responses): issues a
+ * single-use, 1-hour reset token, stores only its hash, and emails the raw token as a link. */
+router.post("/forgot-password", async (req, res, next) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      const { rawToken, tokenHash, expiresAt } = generatePasswordResetToken();
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { resetTokenHash: tokenHash, resetTokenExpiry: expiresAt },
+      });
+
+      sendPasswordResetEmail({ user, rawToken }).catch((error) => {
+        console.error("[authRoutes] Failed to send password reset email:", error?.message || error);
+      });
+    }
+
+    res.json({ message: FORGOT_PASSWORD_MESSAGE });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** Public: verifies the token by hashing the incoming raw value and comparing, checks
+ * expiry, updates the password, and invalidates the token so the link can't be reused. */
+router.post("/reset-password", async (req, res, next) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    const tokenHash = hashResetToken(token);
+
+    const user = await prisma.user.findUnique({ where: { resetTokenHash: tokenHash } });
+
+    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      throw createHttpError(400, "This password reset link is invalid or has expired");
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null },
+    });
+
+    res.json({ message: "Your password has been reset. You can now log in." });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = { authRouter: router };

@@ -1,0 +1,22 @@
+{
+  "badge": "Preferences",
+  "title": "Settings",
+  "subtitle": "Customize language and gameplay preferences.",
+  "language": {
+    "title": "Language",
+    "description": "Choose the language FutureChess uses across the app."
+  },
+  "boardColor": {
+    "title": "Board color",
+    "description": "Choose the colors used on chess boards during games. This applies to all your games.",
+    "saveError": "Could not save board color. Please try again.",
+    "themes": {
+      "blue": "Blue & white",
+      "green": "Green & cream",
+      "wood": "Wood",
+      "purple": "Purple",
+      "grey": "Grey",
+      "red": "Red & white"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "directory": {
+    "badge": "Find a coach",
+    "title": "Learn from experienced chess coaches",
+    "subtitle": "Book a 1:1 session with a coach who fits your level and goals.",
+    "loading": "Loading coaches...",
+    "error": "Could not load coaches.",
+    "empty": "No coaches are available right now. Check back soon.",
+    "experience": "{{years}} yrs experience",
+    "rating": "FIDE {{rating}}",
+    "hourlyRate": "{{rate}} / hr",
+    "viewProfile": "View profile"
+  },
+  "detail": {
+    "backLink": "Back to coaches",
+    "loading": "Loading coach...",
+    "notFound": "Coach not found.",
+    "error": "Could not load this coach. Please try again.",
+    "experienceLabel": "Experience",
+    "experienceValue": "{{years}} years",
+    "ratingLabel": "FIDE rating",
+    "specialtiesLabel": "Specialties",
+    "languagesLabel": "Languages",
+    "hourlyRateLabel": "Hourly rate",
+    "availabilityTitle": "Available sessions",
+    "availabilityEmpty": "This coach has no open sessions right now.",
+    "calendarPrevMonth": "Previous month",
+    "calendarNextMonth": "Next month",
+    "calendarLegend": "Coach is free and can work with a student",
+    "calendarSelectPrompt": "Select a highlighted day to see available times.",
+    "calendarNoSlotsDay": "No open sessions on this day.",
+    "noteLabel": "Note for the coach (optional)",
+    "notePlaceholder": "e.g. I'd like to focus on endgames",
+    "slotBook": "Book",
+    "slotBooking": "Booking...",
+    "bookSuccess": "Request sent! {{name}} will confirm by email.",
+    "bookConflict": "That slot was just booked by someone else — pick another time.",
+    "bookError": "Could not book this slot. Please try again."
+  },
+  "response": {
+    "loading": "Confirming...",
+    "invalidTitle": "This link is invalid or has expired",
+    "invalidBody": "The booking link may have already been used or is incorrect.",
+    "alreadyRespondedTitle": "Already responded",
+    "alreadyRespondedBody": "This booking has already been {{status}}.",
+    "confirmedTitle": "Booking confirmed",
+    "confirmedBody": "The session has been confirmed. The player will see this on their dashboard.",
+    "declinedTitle": "Booking declined",
+    "declinedBody": "The slot has been reopened for other players to book.",
+    "backHome": "Back to FutureChess",
+    "statusLabel": {
+      "pending": "pending",
+      "confirmed": "confirmed",
+      "declined": "declined"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "badge": "Friend game",
+  "title": "Create friend game",
+  "description": "Choose a time control — you will join the room right away and can copy the invite for your opponent from the game screen while you wait.",
+  "timeControl": {
+    "title": "Time control",
+    "description": "Select the clock for this invite link.",
+    "bullet": "1 min per side",
+    "blitz": "3 min + 2 sec increment",
+    "rapid": "10 min per side",
+    "classical": "30 min per side",
+    "freestyle": "No time limit"
+  },
+  "createGame": "Create game",
+  "creatingGame": "Creating game…",
+  "defaultError": "Could not create game. Please try again."
+}

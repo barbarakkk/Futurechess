@@ -11,14 +11,14 @@
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: hsl(222 47% 4%);
-  color: hsl(210 40% 98%);
+  background: hsl(214 100% 97%);
+  color: hsl(222 47% 20%);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: hsl(204 94% 54%);
+  color: hsl(211 100% 50%);
 }
 
 a:hover {
@@ -29,4 +29,174 @@ a:hover {
 .board-shell {
   width: 100%;
   max-width: 560px;
+}
+
+/* Landing page — scoped visuals + motion */
+.landing-page {
+  --font-display: "Syne", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+
+.landing-page .font-display {
+  font-family: var(--font-display);
+}
+
+.landing-page__blobs {
+  background:
+    radial-gradient(ellipse 50% 40% at 15% 20%, hsl(211 100% 50% / 0.08), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 85% 10%, hsl(199 89% 48% / 0.06), transparent 65%),
+    radial-gradient(ellipse 40% 30% at 70% 85%, hsl(211 100% 50% / 0.05), transparent 60%);
+}
+
+.landing-page__cta-band {
+  background: linear-gradient(
+    135deg,
+    hsl(214 100% 97%) 0%,
+    hsl(214 100% 94%) 50%,
+    hsl(214 100% 97%) 100%
+  );
+}
+
+.landing-page__board-frame {
+  animation: landing-board-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%);
+}
+
+.landing-page__board {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Replay popup card shown beside (not on top of) the landing board after the
+   click-triggered Gaprindashvili vs Servaty (Dortmund, 1974) animation finishes — in
+   normal document flow (not absolutely positioned) so it can never get clipped by the
+   hero section's overflow-hidden regardless of surrounding content height. See LandingPage.tsx. */
+.landing-page__replay-popup {
+  position: relative;
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid hsl(211 100% 50% / 0.18);
+  background: #ffffff;
+  box-shadow:
+    0 12px 28px -10px hsl(211 100% 50% / 0.22),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  text-align: center;
+}
+
+/* Small tail pointing up toward the board this popup belongs to. */
+.landing-page__replay-popup::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-left: 1px solid hsl(211 100% 50% / 0.18);
+  border-top: 1px solid hsl(211 100% 50% / 0.18);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.landing-page__replay-popup--in {
+  animation: landing-replay-popup-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.landing-page__replay-popup--out {
+  animation: landing-replay-popup-out 0.5s ease forwards;
+}
+
+.landing-page__replay-popup-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: hsl(222 47% 20%);
+}
+
+.landing-page__replay-popup-subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: hsl(215 25% 45%);
+}
+
+.landing-page__replay-popup-quote {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: hsl(211 100% 50%);
+}
+
+@keyframes landing-replay-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-replay-popup-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.landing-fade-up {
+  animation: landing-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-fade-up-delay-1 {
+  animation-delay: 0.1s;
+}
+
+.landing-fade-up-delay-2 {
+  animation-delay: 0.2s;
+}
+
+.landing-fade-up-delay-3 {
+  animation-delay: 0.3s;
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-fade-up,
+  .landing-page__board-frame,
+  .landing-feature-card,
+  .landing-page__replay-popup--in,
+  .landing-page__replay-popup--out {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -1,0 +1,114 @@
+{
+  "header": {
+    "badge": "Friend match",
+    "title": "Friend game",
+    "gameId": "Game ID: {{id}}"
+  },
+  "status": {
+    "waiting": "Waiting",
+    "active": "In progress",
+    "finished": "Finished"
+  },
+  "loading": {
+    "joining": "Joining game..."
+  },
+  "connection": {
+    "reconnecting": "Reconnecting to realtime game updates...",
+    "lost": "Realtime connection lost. Attempting to reconnect..."
+  },
+  "errors": {
+    "copyFailed": "Could not copy to clipboard. Select the link and copy manually.",
+    "invalidLink": "This game link is invalid or expired.",
+    "joinFailed": "Could not join this game. The link might be invalid or full.",
+    "sessionUnavailable": "Game session is unavailable",
+    "actionFailed": "Action failed",
+    "moveActionFailed": "Game action failed",
+    "moveRejected": "That move wasn't accepted."
+  },
+  "result": {
+    "whiteWon": "White won",
+    "blackWon": "Black won",
+    "draw": "Draw",
+    "inProgress": "In progress",
+    "withReason": "{{result}} by {{reason}}"
+  },
+  "reasons": {
+    "resign": "resignation",
+    "checkmate": "checkmate",
+    "timeout": "timeout",
+    "draw": "a draw",
+    "drawAgreement": "draw agreement"
+  },
+  "turn": {
+    "waitingForOpponent": "Waiting for an opponent to join.",
+    "yourMoveCheck": "Your move. You are in check.",
+    "yourMove": "Your move.",
+    "opponentMoveCheck": "Opponent to move. They are in check.",
+    "opponentMove": "Opponent to move."
+  },
+  "clocks": {
+    "white": "White",
+    "black": "Black",
+    "running": "Running"
+  },
+  "players": {
+    "title": "Players",
+    "white": "White",
+    "black": "Black",
+    "waitingPlaceholder": "Waiting...",
+    "resultLabel": "Result:",
+    "drawOfferPending": "Draw offer pending from {{color}}."
+  },
+  "invite": {
+    "title": "Invite a friend",
+    "description": "Share this link with your opponent — first to open it takes the open seat.",
+    "linkLabel": "Invite link",
+    "gameIdLabel": "Game ID",
+    "copyAriaLabel": "Copy invite link",
+    "copyGameIdAriaLabel": "Copy game ID",
+    "copiedAriaLabel": "Copied",
+    "copyButton": "Copy invite link",
+    "copiedButton": "Copied!",
+    "shareButton": "Share",
+    "shareTitle": "Join my FutureChess game",
+    "waitingHint": "Waiting for an opponent to join..."
+  },
+  "moveHint": {
+    "title": "Move not allowed"
+  },
+  "actions": {
+    "title": "Actions",
+    "resign": "Resign",
+    "offerDraw": "Offer draw",
+    "acceptDraw": "Accept draw",
+    "declineDraw": "Decline draw"
+  },
+  "endModal": {
+    "opponentFallback": "Your opponent",
+    "gameOver": "Game over",
+    "draw": {
+      "title": "Draw",
+      "agreement": "You agreed to a draw. The game is over.",
+      "rule": "The game ended in a draw (stalemate, repetition, or other draw rule).",
+      "generic": "The game ended in a draw."
+    },
+    "win": {
+      "title": "You won",
+      "resign": "{{opponent}} resigned.",
+      "checkmate": "Checkmate — well played.",
+      "timeout": "{{opponent}} ran out of time.",
+      "generic": "The game is over in your favor."
+    },
+    "loss": {
+      "resignTitle": "You resigned",
+      "resignBody": "{{opponent}} wins the game.",
+      "checkmateTitle": "You lost",
+      "checkmateBody": "Checkmate.",
+      "timeoutTitle": "You lost",
+      "timeoutBody": "You ran out of time.",
+      "genericBody": "You lost."
+    },
+    "returning": "Returning to your dashboard in 5 seconds…",
+    "backToDashboard": "Back to dashboard"
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "header": {
+    "badge": "მეგობრული თამაში",
+    "title": "თამაში მეგობართან",
+    "gameId": "თამაშის ID: {{id}}"
+  },
+  "status": {
+    "waiting": "მოლოდინში",
+    "active": "მიმდინარეობს",
+    "finished": "დასრულებულია"
+  },
+  "loading": {
+    "joining": "თამაშში გაწევრიანება..."
+  },
+  "connection": {
+    "reconnecting": "რეალურ დროში კავშირის აღდგენა...",
+    "lost": "რეალურ დროში კავშირი შეწყდა. მიმდინარეობს ხელახლა დაკავშირება..."
+  },
+  "errors": {
+    "copyFailed": "ბმულის კოპირება ვერ მოხერხდა. მონიშნე და დააკოპირე ხელით.",
+    "invalidLink": "ეს თამაშის ბმული არასწორია ან ვადაგასულია.",
+    "joinFailed": "თამაშში გაწევრიანება ვერ მოხერხდა. შესაძლოა, ბმული არასწორია ან თამაში სავსეა.",
+    "sessionUnavailable": "თამაშის სესია მიუწვდომელია",
+    "actionFailed": "მოქმედება ვერ შესრულდა",
+    "moveActionFailed": "სვლის შესრულება ვერ მოხერხდა",
+    "moveRejected": "სვლა უარყოფილია."
+  },
+  "result": {
+    "whiteWon": "თეთრმა მოიგო",
+    "blackWon": "შავმა მოიგო",
+    "draw": "ფრე",
+    "inProgress": "მიმდინარეობს",
+    "withReason": "{{result}} — {{reason}}"
+  },
+  "reasons": {
+    "resign": "დანებებით",
+    "checkmate": "მატით",
+    "timeout": "დროის ამოწურვით",
+    "draw": "ფრით",
+    "drawAgreement": "ფრეზე შეთანხმებით"
+  },
+  "turn": {
+    "waitingForOpponent": "მოწინააღმდეგის მოლოდინი.",
+    "yourMoveCheck": "შენი სვლაა. შახში ხარ.",
+    "yourMove": "შენი სვლაა.",
+    "opponentMoveCheck": "მოწინააღმდეგის სვლაა. ის შახშია.",
+    "opponentMove": "მოწინააღმდეგის სვლაა."
+  },
+  "clocks": {
+    "white": "თეთრი",
+    "black": "შავი",
+    "running": "მიდის"
+  },
+  "players": {
+    "title": "მოთამაშეები",
+    "white": "თეთრი",
+    "black": "შავი",
+    "waitingPlaceholder": "მოლოდინშია...",
+    "resultLabel": "შედეგი:",
+    "drawOfferPending": "{{color}} სთავაზობს ფრეს."
+  },
+  "invite": {
+    "title": "მოიწვიე მეგობარი",
+    "description": "გაუზიარე ეს ბმული მოწინააღმდეგეს — ვინც პირველი გახსნის, დაიკავებს ადგილს.",
+    "linkLabel": "მოწვევის ბმული",
+    "gameIdLabel": "თამაშის ID",
+    "copyAriaLabel": "ბმულის კოპირება",
+    "copyGameIdAriaLabel": "თამაშის ID-ის კოპირება",
+    "copiedAriaLabel": "დაკოპირდა",
+    "copyButton": "ბმულის კოპირება",
+    "copiedButton": "დაკოპირდა!",
+    "shareButton": "გაზიარება",
+    "shareTitle": "შემოუერთდი ჩემს FutureChess თამაშს",
+    "waitingHint": "ველოდებით მოწინააღმდეგის შემოერთებას..."
+  },
+  "moveHint": {
+    "title": "სვლა დაუშვებელია"
+  },
+  "actions": {
+    "title": "მოქმედებები",
+    "resign": "დანებება",
+    "offerDraw": "ფრეს შეთავაზება",
+    "acceptDraw": "ფრეზე დათანხმება",
+    "declineDraw": "ფრეზე უარი"
+  },
+  "endModal": {
+    "opponentFallback": "შენი მოწინააღმდეგე",
+    "gameOver": "თამაში დასრულდა",
+    "draw": {
+      "title": "ფრე",
+      "agreement": "დათანხმდი ფრეზე. თამაში დასრულდა.",
+      "rule": "თამაში ფრედ დასრულდა (პატი, სვლების გამეორება ან სხვა წესის მიხედვით).",
+      "generic": "თამაში ფრედ დასრულდა."
+    },
+    "win": {
+      "title": "შენ მოიგე",
+      "resign": "{{opponent}} დანებდა.",
+      "checkmate": "მატი — კარგად ითამაშე.",
+      "timeout": "{{opponent}}-ს დრო ამოეწურა.",
+      "generic": "თამაში შენს სასარგებლოდ დასრულდა."
+    },
+    "loss": {
+      "resignTitle": "შენ დანებდი",
+      "resignBody": "{{opponent}} იგებს თამაშს.",
+      "checkmateTitle": "შენ წააგე",
+      "checkmateBody": "მატი.",
+      "timeoutTitle": "შენ წააგე",
+      "timeoutBody": "დრო ამოგეწურა.",
+      "genericBody": "შენ წააგე."
+    },
+    "returning": "დაშბორდზე დაბრუნება 5 წამში…",
+    "backToDashboard": "დაშბორდზე დაბრუნება"
+  }
+}

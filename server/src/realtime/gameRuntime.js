@@ -198,6 +198,10 @@ function upsertRuntime(game) {
     const { chess, moves } = rehydrateChess(game.movesJson);
     const runtime = {
       gameId: game.id,
+      // Cached metadata snapshot (players/status/result/timeControl). Kept fresh at
+      // every point a Game row changes — create, join, finalize — so the hot move
+      // path can read participants/status from memory instead of re-querying Postgres.
+      game,
       chess,
       moves,
       baseClockMs,
@@ -220,6 +224,7 @@ function upsertRuntime(game) {
     return runtime;
   }
 
+  current.game = game;
   current.baseClockMs = baseClockMs;
   current.activeColor = current.chess.turn();
 
@@ -277,7 +282,13 @@ async function finalizeGame(game, runtime, { result, reason }) {
     select: gameSelect,
   });
 
-  return serializeGameState(updated, runtime, reason);
+  const state = serializeGameState(updated, runtime, reason);
+
+  // Game is over — drop it from the live Map so finished games don't accumulate
+  // in memory. Any later read re-seeds from Postgres via loadGame().
+  forgetManagedGame(game.id);
+
+  return state;
 }
 
 function serializeGameState(game, runtime, terminalReason = null) {
@@ -340,7 +351,11 @@ async function getGameState(gameId) {
 }
 
 async function submitMove(gameId, userId, payload) {
-  const game = await loadGame(gameId);
+  // Reuse the in-memory metadata snapshot when the game is already live (the common
+  // case). Only hit Postgres when the runtime is cold (e.g. first touch after a
+  // server restart). Status transitions all refresh runtime.game, so this is safe.
+  const existing = managedGames.get(gameId);
+  const game = existing?.game ?? (await loadGame(gameId));
 
   if (game.status !== "active" || game.result) {
     throw createHttpError(400, "Game is not active");
@@ -405,7 +420,10 @@ async function submitMove(gameId, userId, payload) {
     });
   }
 
-  return getGameState(gameId);
+  // Build the reply straight from the in-memory runtime + cached metadata — no need
+  // to re-read the row we just wrote. (The mover can't have timed out; we checked
+  // clocks at entry.)
+  return serializeGameState(game, runtime);
 }
 
 async function resignGame(gameId, userId) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Clock, Sparkles, Swords } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -18,18 +19,21 @@ type TimeControl = "Bullet" | "Blitz" | "Rapid" | "Classical" | "Freestyle";
 const controls: Array<{
   key: TimeControl;
   label: string;
-  subtitle: string;
+  subtitleKey: string;
   badge: string;
 }> = [
-  { key: "Bullet", label: "Bullet", subtitle: "1 min per side", badge: "1+0" },
-  { key: "Blitz", label: "Blitz", subtitle: "3 min + 2 sec increment", badge: "3+2" },
-  { key: "Rapid", label: "Rapid", subtitle: "10 min per side", badge: "10+0" },
-  { key: "Classical", label: "Classical", subtitle: "30 min per side", badge: "30+0" },
-  { key: "Freestyle", label: "Freestyle", subtitle: "No time limit", badge: "∞" },
+  { key: "Bullet", label: "Bullet", subtitleKey: "timeControl.bullet", badge: "1+0" },
+  { key: "Blitz", label: "Blitz", subtitleKey: "timeControl.blitz", badge: "3+2" },
+  { key: "Rapid", label: "Rapid", subtitleKey: "timeControl.rapid", badge: "10+0" },
+  { key: "Classical", label: "Classical", subtitleKey: "timeControl.classical", badge: "30+0" },
+  { key: "Freestyle", label: "Freestyle", subtitleKey: "timeControl.freestyle", badge: "∞" },
 ];
 
 export function NewGamePage() {
+  const { t } = useTranslation("newGame");
   const navigate = useNavigate();
+  // NOTE: timeControl holds the literal English value ("Bullet" | "Blitz" | "Rapid" | "Classical" | "Freestyle")
+  // sent verbatim to the API below — this must never be translated/localized.
   const [timeControl, setTimeControl] = useState<TimeControl>("Blitz");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -39,11 +43,13 @@ export function NewGamePage() {
     setError("");
 
     try {
+      // `timeControl` is sent untouched — the server compares it against the literal
+      // English strings "Bullet" | "Blitz" | "Rapid" | "Classical" | "Freestyle".
       const response = await api.post("/games", { timeControl });
       const gameId = response.data.game.id as string;
       navigate(`/game/${gameId}`);
     } catch (requestError: any) {
-      setError(getApiErrorMessage(requestError, "Could not create game. Please try again."));
+      setError(getApiErrorMessage(requestError, t("defaultError")));
     } finally {
       setCreating(false);
     }
@@ -60,20 +66,17 @@ export function NewGamePage() {
         <header className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-            Friend game
+            {t("badge")}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
               <h1 className="flex flex-wrap items-center gap-2 text-3xl font-bold tracking-tight md:text-4xl">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-                  <Swords className="h-5 w-5 text-primary" aria-hidden />
+                  <Swords className="h-5 w-5 text-[#71808F]" aria-hidden />
                 </span>
-                Create friend game
+                {t("title")}
               </h1>
-              <p className="text-muted-foreground">
-                Choose a time control — you will join the room right away and can copy the invite
-                for your opponent from the game screen while you wait.
-              </p>
+              <p className="text-muted-foreground">{t("description")}</p>
             </div>
           </div>
         </header>
@@ -82,9 +85,9 @@ export function NewGamePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5 text-primary" aria-hidden />
-              Time control
+              {t("timeControl.title")}
             </CardTitle>
-            <CardDescription>Select the clock for this invite link.</CardDescription>
+            <CardDescription>{t("timeControl.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-2">
@@ -97,13 +100,13 @@ export function NewGamePage() {
                     onClick={() => setTimeControl(control.key)}
                     className={`flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition ${
                       selected
-                        ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(204_94%_54%_/_0.35)]"
+                        ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(211_100%_50%_/_0.35)]"
                         : "border-border bg-background/50 hover:border-border hover:bg-secondary/60"
                     }`}
                   >
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground">{control.label}</p>
-                      <p className="text-sm text-muted-foreground">{control.subtitle}</p>
+                      <p className="text-sm text-muted-foreground">{t(control.subtitleKey)}</p>
                     </div>
                     <Badge variant={selected ? "default" : "outline"} className="shrink-0 tabular-nums">
                       {control.badge}
@@ -116,7 +119,7 @@ export function NewGamePage() {
         </Card>
 
         {error ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
@@ -127,7 +130,7 @@ export function NewGamePage() {
           disabled={creating}
           onClick={handleCreateGame}
         >
-          {creating ? "Creating game…" : "Create game"}
+          {creating ? t("creatingGame") : t("createGame")}
         </Button>
       </section>
     </div>

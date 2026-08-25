@@ -1,0 +1,113 @@
+{
+  "badge": "მწვრთნელობა ჩვენთან",
+  "title": "გახდი FutureChess-ის მწვრთნელი",
+  "subtitle": "გვიამბე შენი ჭადრაკული გამოცდილებისა და მწვრთნელობის შესახებ. ყველა განაცხადს ხელით განვიხილავთ.",
+  "loading": "იტვირთება...",
+  "loadError": "განაცხადის სტატუსის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.",
+  "pending": {
+    "body": "შენი განაცხადი განხილვის პროცესშია. გადაწყვეტილების შემდეგ ელფოსტით შეგატყობინებთ."
+  },
+  "rejected": {
+    "body": "შენი ბოლო განაცხადი არ დამტკიცდა. შეგიძლია ხელახლა შეავსო განაცხადი ქვემოთ."
+  },
+  "approved": {
+    "body": "შენი განაცხადი დამტკიცდა! გამოდი და ხელახლა შედი სისტემაში, რომ მწვრთნელის დაშბორდი გამოჩნდეს."
+  },
+  "form": {
+    "title": "განაცხადის დეტალები",
+    "wizard": {
+      "steps": {
+        "about": "შენ შესახებ",
+        "contact": "კონტაქტი",
+        "profile": "პროფილი",
+        "pricing": "ფასი",
+        "availability": "ხელმისაწვდომობა"
+      },
+      "stepCounter": "ნაბიჯი {{current}} / {{total}}",
+      "back": "უკან",
+      "next": "შემდეგი",
+      "stepIncompleteError": "გთხოვთ შეავსოთ სავალდებულო ველები გასაგრძელებლად.",
+      "availability": {
+        "utcNote": "ქვემოთ მითითებული დრო UTC-ის მიხედვითაა.",
+        "calendarTitle": "მიმდინარე თვე",
+        "calendarSubtitle": "დააჭირე დღეს ხელმისაწვდომობის დასამატებლად, ან უკვე დამატებულ დღეს — წასაშლელად.",
+        "pastDateError": "ამ თარიღის არჩევა ვერ მოხერხდება — ხელმისაწვდომობა უნდა დაიწყოს განაცხადის შემდეგ დღეს.",
+        "legendAvailable": "ხელმისაწვდომი",
+        "oneOffPromptTitle": "დაამატე ხელმისაწვდომობა {{date}}-სთვის",
+        "oneOffAdd": "დამატება",
+        "oneOffCancel": "გაუქმება",
+        "summaryEmpty": "ჯერ არ დაგიმატებია ხელმისაწვდომობა — შეგიძლია ეს მოგვიანებით მწვრთნელის დაშბორდიდან გააკეთო.",
+        "daysAddedCount_other": "ამ თვეში დამატებულია {{count}} დღე"
+      }
+    },
+    "name": "სახელი",
+    "surname": "გვარი",
+    "titleField": "წოდება",
+    "titlePlaceholder": "მაგ. FIDE-ოსტატი",
+    "fideId": "FIDE ID (არასავალდებულო)",
+    "fideIdPlaceholder": "მაგ. 13304821",
+    "experienceYears": "მწვრთნელობის გამოცდილება (წლები)",
+    "fideRating": "FIDE რეიტინგი (არასავალდებულო)",
+    "phone": "მობილურის ნომერი",
+    "phonePlaceholder": "+995 5XX XX XX XX",
+    "whatsapp": "WhatsApp ნომერი (არასავალდებულო)",
+    "whatsappLink": "WhatsApp ბმული (არასავალდებულო)",
+    "whatsappLinkPlaceholder": "https://wa.me/995...",
+    "telegram": "Telegram მომხმარებელი (არასავალდებულო)",
+    "telegramPlaceholder": "@username",
+    "telegramLink": "Telegram ბმული (არასავალდებულო)",
+    "telegramLinkPlaceholder": "https://t.me/...",
+    "bio": "ბიოგრაფია (არასავალდებულო)",
+    "specialization": "სპეციალიზაცია",
+    "specializationPlaceholder": "აირჩიეთ ვარიანტი",
+    "specializationOptions": {
+      "coach": "მწვრთნელი",
+      "sparringPartner": "სპარინგ-პარტნიორი",
+      "coachSparringPartner": "მწვრთნელი / სპარინგ-პარტნიორი"
+    },
+    "languages": "რომელ ენებს ფლობთ",
+    "languagesPlaceholder": "აირჩიეთ ენები",
+    "languagesRequiredError": "აირჩიეთ მინიმუმ ერთი ენა",
+    "languageOptions": {
+      "georgian": "ქართული",
+      "english": "ინგლისური",
+      "russian": "რუსული",
+      "german": "გერმანული",
+      "french": "ფრანგული",
+      "spanish": "ესპანური",
+      "turkish": "თურქული",
+      "armenian": "სომხური",
+      "ukrainian": "უკრაინული"
+    },
+    "hourlyRate": "საათობრივი ღირებულება",
+    "currency": "ვალუტა",
+    "photo": "ფოტო (არასავალდებულო)",
+    "photoUpload": "ფოტოს ატვირთვა",
+    "photoChange": "ფოტოს შეცვლა",
+    "photoUploading": "მუშავდება...",
+    "photoRemove": "ფოტოს წაშლა",
+    "photoHint": "JPG, PNG ან WebP — ზომა ავტომატურად შეიცვლება.",
+    "photoInvalidType": "გთხოვთ აირჩიოთ სურათის ფაილი.",
+    "photoResizeError": "სურათის დამუშავება ვერ მოხერხდა. სცადეთ სხვა ფაილი.",
+    "submit": "განაცხადის გაგზავნა",
+    "submitting": "იგზავნება...",
+    "submitError": "განაცხადის გაგზავნა ვერ მოხერხდა. სცადე ხელახლა."
+  },
+  "response": {
+    "loading": "დადასტურება მიმდინარეობს...",
+    "invalidTitle": "ეს ბმული არასწორია ან ვადაგასულია",
+    "invalidBody": "შესაძლოა განაცხადის ბმული უკვე გამოყენებულია ან არასწორია.",
+    "alreadyRespondedTitle": "პასუხი უკვე გაცემულია",
+    "alreadyRespondedBody": "ეს განაცხადი უკვე {{status}} არის.",
+    "approvedTitle": "განაცხადი დამტკიცდა",
+    "approvedBody": "განმცხადებელი გახდა მწვრთნელი და ელფოსტით შეატყობინეს.",
+    "rejectedTitle": "განაცხადი უარყოფილია",
+    "rejectedBody": "განმცხადებელს ელფოსტით შეატყობინეს.",
+    "backHome": "დაბრუნება FutureChess-ზე",
+    "statusLabel": {
+      "pending": "მოლოდინში",
+      "approved": "დამტკიცებული",
+      "rejected": "უარყოფილი"
+    }
+  }
+}

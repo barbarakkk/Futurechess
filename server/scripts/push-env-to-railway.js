@@ -6,7 +6,7 @@
  *   railway login
  *   From repo root: railway link   (pick Chesshub project + API service)
  *
- * Usage (from ChessHub repo root):  node server/scripts/push-env-to-railway.js
+ * Usage (from FutureChess repo root):  node server/scripts/push-env-to-railway.js
  * Optional:                           set RAILWAY_SERVICE=my-service-name
  */
 
