@@ -3,6 +3,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
 import enAppShell from "../locales/en/appShell.json";
+import enBoard from "../locales/en/board.json";
 import enLanding from "../locales/en/landing.json";
 import enAuth from "../locales/en/auth.json";
 import enDashboard from "../locales/en/dashboard.json";
@@ -16,6 +17,7 @@ import enBecomeCoach from "../locales/en/becomeCoach.json";
 import enCoachDashboard from "../locales/en/coachDashboard.json";
 
 import kaAppShell from "../locales/ka/appShell.json";
+import kaBoard from "../locales/ka/board.json";
 import kaLanding from "../locales/ka/landing.json";
 import kaAuth from "../locales/ka/auth.json";
 import kaDashboard from "../locales/ka/dashboard.json";
@@ -42,6 +44,7 @@ i18n
     resources: {
       en: {
         appShell: enAppShell,
+        board: enBoard,
         landing: enLanding,
         auth: enAuth,
         dashboard: enDashboard,
@@ -56,6 +59,7 @@ i18n
       },
       ka: {
         appShell: kaAppShell,
+        board: kaBoard,
         landing: kaLanding,
         auth: kaAuth,
         dashboard: kaDashboard,
@@ -73,6 +77,7 @@ i18n
     supportedLngs: ["en", "ka"],
     ns: [
       "appShell",
+      "board",
       "landing",
       "auth",
       "dashboard",

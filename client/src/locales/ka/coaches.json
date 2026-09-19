@@ -9,7 +9,15 @@
     "experience": "{{years}} წლიანი გამოცდილება",
     "rating": "FIDE {{rating}}",
     "hourlyRate": "{{rate}} / სთ",
-    "viewProfile": "პროფილის ნახვა"
+    "viewProfile": "პროფილის ნახვა",
+    "searchLabel": "მწვრთნელების ძებნა",
+    "searchPlaceholder": "მოძებნე სახელით ან სპეციალიზაციით",
+    "viewToggleLabel": "ხედის შეცვლა",
+    "viewGrid": "ბადე",
+    "viewList": "სია",
+    "resultsCount_one": "{{count}} მწვრთნელია ხელმისაწვდომი",
+    "resultsCount_other": "{{count}} მწვრთნელია ხელმისაწვდომი",
+    "searchEmpty": "მწვრთნელი \"{{query}}\"-ით ვერ მოიძებნა. სცადე სხვა სახელი ან სპეციალიზაცია."
   },
   "detail": {
     "backLink": "მწვრთნელებთან დაბრუნება",

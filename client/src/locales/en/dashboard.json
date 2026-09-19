@@ -3,6 +3,8 @@
   "welcomeBack": "Welcome back, <1>{{username}}</1>",
   "defaultPlayerName": "Player",
   "subtitle": "Pick a mode, review your stats, or jump into a recent game.",
+  "subtitleCoach": "Your day at a glance.",
+  "retry": "Try again",
   "stats": {
     "totalGames": {
       "title": "Total games",
@@ -15,10 +17,58 @@
     "currentStreak": {
       "title": "Current streak",
       "badge": "Consecutive wins"
-    }
+    },
+    "wins": {
+      "title": "Wins"
+    },
+    "draws": {
+      "title": "Draws"
+    },
+    "losses": {
+      "title": "Losses"
+    },
+    "lossRate": {
+      "title": "Loss rate"
+    },
+    "errorLoad": "Couldn't load your stats."
+  },
+  "resumeGame": {
+    "badge": "Your move",
+    "description": "{{timeControl}} vs {{opponent}}",
+    "cta": "Resume game"
+  },
+  "availabilityAlert": {
+    "title": "You haven't set any availability — students can't book you yet.",
+    "cta": "Set availability"
+  },
+  "today": {
+    "title": "Today",
+    "empty": "Nothing scheduled today.",
+    "sessionWith": "Session with {{username}}",
+    "startingNow": "Starting now",
+    "inMinutes": "in {{minutes}}m",
+    "inHours": "in {{hours}}h",
+    "inHoursMinutes": "in {{hours}}h {{minutes}}m"
+  },
+  "earnings": {
+    "title": "This month",
+    "sessionsCompleted_one": "{{count}} session completed",
+    "sessionsCompleted_other": "{{count}} sessions completed"
+  },
+  "publicPage": {
+    "title": "Public page",
+    "cta": "See how people find you"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "You're all caught up.",
+    "requestMessage": "{{username}} requested a session",
+    "markAllRead": "Mark all read",
+    "ariaLabel": "Notifications",
+    "ariaLabelUnread": "Notifications ({{count}} unread)"
   },
   "playVsFriend": {
-    "title": "Play vs friend",
+    "title": "Play online",
     "description": "Realtime clocks, invite links, and server-validated moves.",
     "timeControls": {
       "bullet": "Bullet",
@@ -39,7 +89,7 @@
     "cta": "Start AI game"
   },
   "joinGame": {
-    "title": "Join a friend's game",
+    "title": "Join a friend",
     "description": "Got an invite link from a friend? Paste it here to jump straight into the game.",
     "placeholder": "Paste game link or code",
     "button": "Join game",
@@ -51,19 +101,38 @@
     "description": "Sessions you've requested with a coach.",
     "loading": "Loading your sessions...",
     "empty": "You haven't booked a coach yet.",
+    "emptyDescription": "Book time with a coach to see it here.",
     "browseCoaches": "Browse coaches",
+    "errorLoad": "Couldn't load your sessions.",
     "status": {
       "pending": "Pending",
       "confirmed": "Confirmed",
       "declined": "Declined"
     }
   },
+  "bookingRequests": {
+    "title": "Booking requests",
+    "loading": "Loading requests...",
+    "error": "Couldn't load booking requests.",
+    "emptyTitle": "No pending requests",
+    "emptyDescription": "New booking requests will show up here.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "daysOpen_one": "{{count}} day open",
+    "daysOpen_other": "{{count}} days open",
+    "respondError": "Couldn't update this request."
+  },
   "recentGames": {
     "title": "Recent games",
     "description": "Continue a friend match from your latest activity.",
     "viewAll": "View all",
     "loading": "Loading recent games...",
-    "empty": "No recent games yet."
+    "empty": "No recent games yet.",
+    "emptyDescription": "Play your first game and it'll show up here.",
+    "errorLoad": "Couldn't load recent games.",
+    "opponent": "vs {{username}}",
+    "inProgress": "In progress",
+    "waiting": "Waiting for opponent"
   },
   "errors": {
     "loadFailed": "Could not load dashboard data."

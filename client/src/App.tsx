@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { PreferencesHydrator } from "./components/PreferencesHydrator";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AiGamePage } from "./pages/AiGamePage";
+import { BoardPage } from "./pages/BoardPage";
 import { BecomeCoachPage } from "./pages/BecomeCoachPage";
 import { CoachApplicationResponsePage } from "./pages/CoachApplicationResponsePage";
 import { CoachBookingResponsePage } from "./pages/CoachBookingResponsePage";
@@ -38,6 +39,7 @@ export function App() {
             <Route path="/new-game" element={<NewGamePage />} />
             <Route path="/game/:gameId" element={<FriendGamePage />} />
             <Route path="/ai-game/:gameId" element={<AiGamePage />} />
+            <Route path="/board" element={<BoardPage />} />
             <Route path="/game-history" element={<GameHistoryPage />} />
             <Route path="/coaches" element={<CoachesPage />} />
             <Route path="/coaches/:coachId" element={<CoachDetailPage />} />

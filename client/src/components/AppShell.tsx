@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Cpu,
+  Grid2x2,
   Crown,
   GraduationCap,
   History,
@@ -70,6 +71,7 @@ export function AppShell() {
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
     { to: "/new-game", label: t("nav.playVsFriend"), icon: Swords },
     { to: "/ai-game/new", label: t("nav.playVsAi"), icon: Cpu },
+    { to: "/board", label: t("nav.board"), icon: Grid2x2 },
     { to: "/game-history", label: t("nav.gameHistory"), icon: History },
     { to: "/coaches", label: t("nav.coaches"), icon: GraduationCap },
     user?.role === "coach"

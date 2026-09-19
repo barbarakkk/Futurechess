@@ -9,7 +9,15 @@
     "experience": "{{years}} yrs experience",
     "rating": "FIDE {{rating}}",
     "hourlyRate": "{{rate}} / hr",
-    "viewProfile": "View profile"
+    "viewProfile": "View profile",
+    "searchLabel": "Search coaches",
+    "searchPlaceholder": "Search by name or specialty",
+    "viewToggleLabel": "Switch view",
+    "viewGrid": "Grid",
+    "viewList": "List",
+    "resultsCount_one": "{{count}} coach available",
+    "resultsCount_other": "{{count}} coaches available",
+    "searchEmpty": "No coaches match \"{{query}}\". Try a different name or specialty."
   },
   "detail": {
     "backLink": "Back to coaches",

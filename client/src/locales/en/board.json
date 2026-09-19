@@ -1,0 +1,11 @@
+{
+  "title": "Chess Board",
+  "subtitle": "A free board for explaining moves and positions. No rules, no turns.",
+  "clear": "Clear board",
+  "palette": {
+    "title": "Pieces",
+    "hint": "Drag a piece onto the board, or click a piece and then a square. Drag a piece off the board to remove it.",
+    "white": "White",
+    "black": "Black"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "signIn": "Sign in",
   "createAccount": "Create account",
-  "badge": "Realtime play · Stockfish AI · Invite links",
-  "heroTitle": "Play chess with friends, anytime",
+  "heroTitleLine1": "Play and learn chess",
+  "heroTitleLine2": "anytime, anywhere",
   "heroSubtitle": "Jump into rated-style friend games with server clocks, or practice against the engine — same rules, one clean experience.",
   "getStarted": "Get started",
   "haveAccount": "I have an account",
   "features": {
     "friendGames": {
-      "title": "Friend games",
+      "title": "Play online",
       "description": "Create a room, share the link, and play live with clocks synced on the server."
     },
     "playVsAi": {
@@ -18,6 +18,10 @@
     "dashboard": {
       "title": "Your dashboard",
       "description": "Track stats and jump back into recent games from one hub after you sign in."
+    },
+    "learnChess": {
+      "title": "Learn chess",
+      "description": "Book a session with a coach and sharpen your openings, tactics, and endgames."
     }
   },
   "replay": {

@@ -31,6 +31,33 @@ a:hover {
   max-width: 560px;
 }
 
+/* Chess Board page — piece dock */
+@keyframes board-dock-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.board-dock {
+  animation: board-dock-rise 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.board-dock-item {
+  transform-origin: bottom center;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-dock-item:hover {
+    transform: translateY(-4px) scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-dock { animation: none; }
+  .board-dock-item { transition: none; }
+  .board-dock-item:hover { transform: none; }
+}
+
 /* Landing page — scoped visuals + motion */
 .landing-page {
   --font-display: "Syne", system-ui, sans-serif;
@@ -198,5 +225,82 @@ a:hover {
   .landing-page__replay-popup--out {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Dashboard page (client/src/pages/DashboardPage.tsx) — the widget-wall layout.
+   Apple-style materials: translucent layered surfaces, a bright top hairline to
+   catch light, critically-damped entrance motion (fade + small rise,
+   cubic-bezier(0.22,1,0.36,1) — same ease-out curve used by the landing page
+   above), and instant press feedback. */
+.dashboard-page {
+  --dash-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dashboard-glass {
+  background: rgba(255, 255, 255, 0.68);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 16px 32px -20px rgba(15, 70, 150, 0.28);
+}
+
+.dashboard-press {
+  transition: transform 100ms var(--dash-ease), box-shadow 150ms var(--dash-ease);
+}
+.dashboard-press:active {
+  transform: scale(0.97);
+}
+
+.dashboard-lift {
+  transition: transform 220ms var(--dash-ease), box-shadow 220ms var(--dash-ease);
+}
+.dashboard-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 22px 40px -18px rgba(15, 70, 150, 0.34);
+}
+
+.dashboard-in {
+  animation: dashboard-fade-rise 420ms var(--dash-ease) both;
+}
+
+/* `to` deliberately omits `transform` (rather than repeating translateY(0) scale(1)) —
+   with animation-fill-mode "both", an explicit end transform is retained forever after
+   the animation finishes, which creates a stacking context on the element and traps any
+   absolutely-positioned child (e.g. the notification dropdown) behind later siblings. */
+@keyframes dashboard-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-in {
+    animation: dashboard-fade 220ms ease both;
+  }
+  .dashboard-lift:hover {
+    transform: none;
+  }
+  .dashboard-press:active {
+    transform: none;
+  }
+}
+
+@keyframes dashboard-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

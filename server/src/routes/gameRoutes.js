@@ -76,10 +76,20 @@ router.get("/recent", requireAuth, async (req, res, next) => {
         timeControl: true,
         startedAt: true,
         endedAt: true,
+        whitePlayerId: true,
+        whitePlayer: { select: { username: true } },
+        blackPlayer: { select: { username: true } },
       },
     });
 
-    res.json({ games });
+    // The dashboard shows who the game was against — derive that from whichever
+    // side isn't the requesting user rather than exposing both player objects.
+    res.json({
+      games: games.map(({ whitePlayerId, whitePlayer, blackPlayer, ...game }) => ({
+        ...game,
+        opponentUsername: (whitePlayerId === req.user.id ? blackPlayer : whitePlayer)?.username ?? null,
+      })),
+    });
   } catch (error) {
     next(error);
   }
@@ -193,6 +203,7 @@ router.get("/stats", requireAuth, async (req, res, next) => {
     const completedGames = friendCompleted.length + aiCompleted.length;
 
     let wins = 0;
+    let draws = 0;
 
     for (const game of friendCompleted) {
       if (
@@ -200,6 +211,8 @@ router.get("/stats", requireAuth, async (req, res, next) => {
         (game.result === "0-1" && game.blackPlayerId === req.user.id)
       ) {
         wins += 1;
+      } else if (game.result === "1/2-1/2") {
+        draws += 1;
       }
     }
 
@@ -209,10 +222,14 @@ router.get("/stats", requireAuth, async (req, res, next) => {
         (game.result === "0-1" && game.userColor === "black")
       ) {
         wins += 1;
+      } else if (game.result === "1/2-1/2") {
+        draws += 1;
       }
     }
 
+    const losses = completedGames - wins - draws;
     const winRate = completedGames > 0 ? Math.round((wins / completedGames) * 100) : 0;
+    const lossRate = completedGames > 0 ? Math.round((losses / completedGames) * 100) : 0;
 
     const streakEntries = [
       ...friendCompleted.map((game) => {
@@ -248,6 +265,10 @@ router.get("/stats", requireAuth, async (req, res, next) => {
         totalGames,
         winRate,
         currentStreak,
+        wins,
+        draws,
+        losses,
+        lossRate,
       },
     });
   } catch (error) {

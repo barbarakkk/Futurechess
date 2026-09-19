@@ -5,10 +5,10 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
   ArrowRight,
+  BookOpen,
   Cpu,
   Crown,
   LayoutDashboard,
-  Sparkles,
   Swords,
 } from "lucide-react";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
@@ -39,7 +39,6 @@ const REPLAY_STEPS: ReplayStep[] = (() => {
 const REPLAY_TOTAL_DURATION_MS = 30_000;
 const REPLAY_STEP_MS = REPLAY_TOTAL_DURATION_MS / REPLAY_STEPS.length;
 const REPLAY_FINAL_PAUSE_MS = 400;
-const REPLAY_OVERLAY_HOLD_MS = 8000;
 const REPLAY_OVERLAY_FADE_MS = 500;
 
 // Federations of the two real players in REPLAY_GAME_PGN — not translatable UI copy,
@@ -47,7 +46,7 @@ const REPLAY_OVERLAY_FADE_MS = 500;
 const REPLAY_WHITE_FLAG = "🇬🇪"; // Nona Gaprindashvili — Georgia
 const REPLAY_BLACK_FLAG = "🇩🇪"; // Rudolf Servaty — Germany
 
-type ReplayPhase = "idle" | "playing" | "overlay-in" | "overlay-out";
+type ReplayPhase = "idle" | "playing" | "overlay-out";
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => {
@@ -77,6 +76,8 @@ export function LandingPage() {
     }
     const runId = (runIdRef.current += 1);
 
+    // The result popup shows immediately ("playing" phase) and stays up for the
+    // whole replay, not just after the moves finish.
     setReplayPhase("playing");
 
     for (let i = 0; i < REPLAY_STEPS.length; i += 1) {
@@ -88,10 +89,6 @@ export function LandingPage() {
 
     await delay(REPLAY_FINAL_PAUSE_MS);
     if (runIdRef.current !== runId) return;
-    setReplayPhase("overlay-in");
-
-    await delay(REPLAY_OVERLAY_HOLD_MS);
-    if (runIdRef.current !== runId) return;
     setReplayPhase("overlay-out");
 
     await delay(REPLAY_OVERLAY_FADE_MS);
@@ -102,7 +99,7 @@ export function LandingPage() {
   }
 
   const replayFen = replayStepIndex === 0 ? LANDING_BOARD_FEN : REPLAY_STEPS[replayStepIndex - 1].fen;
-  const showOverlay = replayPhase === "overlay-in" || replayPhase === "overlay-out";
+  const showOverlay = replayPhase === "playing" || replayPhase === "overlay-out";
 
   const squareStyles = useMemo(() => {
     if (!highlightSquare || replayPhase !== "playing") {
@@ -160,6 +157,13 @@ export function LandingPage() {
       accentColor: "#10B981",
       iconClass: "bg-[#10B981]",
     },
+    {
+      icon: BookOpen,
+      title: t("features.learnChess.title"),
+      description: t("features.learnChess.description"),
+      accentColor: "#EAB308",
+      iconClass: "bg-[#EAB308]",
+    },
   ] as const;
 
   return (
@@ -199,13 +203,9 @@ export function LandingPage() {
         <section className="relative z-10 overflow-hidden">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:grid-cols-2 md:gap-16 md:px-8 md:py-24 lg:py-28">
             <div className="max-w-xl">
-              <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-3.5 py-1.5 text-xs font-medium text-primary shadow-soft">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                {t("badge")}
-              </div>
-
-              <h1 className="landing-fade-up landing-fade-up-delay-1 mt-6 font-display text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem]">
-                {t("heroTitle")}
+              <h1 className="landing-fade-up landing-fade-up-delay-1 mt-6 inline-flex flex-col gap-1 rounded-2xl border border-primary/20 bg-white px-6 py-5 font-display text-3xl font-bold leading-[1.15] tracking-tight text-foreground shadow-soft sm:text-4xl lg:text-[2.75rem]">
+                <span className="whitespace-nowrap">{t("heroTitleLine1")}</span>
+                <span className="whitespace-nowrap">{t("heroTitleLine2")}</span>
               </h1>
 
               <p className="landing-fade-up landing-fade-up-delay-2 mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
@@ -251,7 +251,7 @@ export function LandingPage() {
               {showOverlay ? (
                 <div
                   className={`landing-page__replay-popup ${
-                    replayPhase === "overlay-in"
+                    replayPhase === "playing"
                       ? "landing-page__replay-popup--in"
                       : "landing-page__replay-popup--out"
                   }`}
@@ -272,7 +272,7 @@ export function LandingPage() {
 
         <section className="relative z-10 border-t border-border/60 bg-[#F5F7FA]">
           <div className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
-            <ul className="grid gap-6 md:grid-cols-3">
+            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {features.map((feature) => (
                 <li
                   key={feature.title}
@@ -301,7 +301,7 @@ export function LandingPage() {
             <div className="flex flex-col items-center gap-6 text-center md:flex-row md:justify-between md:text-left">
               <div>
                 <p className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-                  {t("heroTitle")}
+                  {t("heroTitleLine1")} {t("heroTitleLine2")}
                 </p>
                 <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
                   {t("heroSubtitle")}
