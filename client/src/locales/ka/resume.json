@@ -1,0 +1,19 @@
+{
+  "friend": {
+    "title": "მიმდინარე ონლაინ თამაში",
+    "subtitle": "{{timeControl}} — {{opponent}}-ს წინააღმდეგ",
+    "opponentFallback": "მეგობრის",
+    "waitingTitle": "შენი მოწვევა მოწინააღმდეგეს ელოდება",
+    "waitingSubtitle": "{{timeControl}} თამაში — გააზიარე ბმული დასაწყებად"
+  },
+  "ai": {
+    "title": "მიმდინარე თამაში AI-სთან",
+    "subtitle": "Stockfish-ის წინააღმდეგ ({{difficulty}}) · {{count}} სვლა",
+    "yourMove": "შენი სვლაა",
+    "engineMove": "Stockfish დადის"
+  },
+  "cta": "თამაშის გაგრძელება",
+  "ctaWaiting": "თამაშის გახსნა",
+  "cancelInvite": "მოწვევის გაუქმება",
+  "cancelError": "მოწვევის გაუქმება ვერ მოხერხდა. სცადე თავიდან."
+}

@@ -15,6 +15,7 @@ import enSettings from "../locales/en/settings.json";
 import enCoaches from "../locales/en/coaches.json";
 import enBecomeCoach from "../locales/en/becomeCoach.json";
 import enCoachDashboard from "../locales/en/coachDashboard.json";
+import enResume from "../locales/en/resume.json";
 
 import kaAppShell from "../locales/ka/appShell.json";
 import kaBoard from "../locales/ka/board.json";
@@ -29,6 +30,7 @@ import kaSettings from "../locales/ka/settings.json";
 import kaCoaches from "../locales/ka/coaches.json";
 import kaBecomeCoach from "../locales/ka/becomeCoach.json";
 import kaCoachDashboard from "../locales/ka/coachDashboard.json";
+import kaResume from "../locales/ka/resume.json";
 
 export const supportedLanguages = [
   { code: "en", label: "English" },
@@ -56,6 +58,7 @@ i18n
         coaches: enCoaches,
         becomeCoach: enBecomeCoach,
         coachDashboard: enCoachDashboard,
+        resume: enResume,
       },
       ka: {
         appShell: kaAppShell,
@@ -71,6 +74,7 @@ i18n
         coaches: kaCoaches,
         becomeCoach: kaBecomeCoach,
         coachDashboard: kaCoachDashboard,
+        resume: kaResume,
       },
     },
     fallbackLng: "en",
@@ -89,6 +93,7 @@ i18n
       "coaches",
       "becomeCoach",
       "coachDashboard",
+      "resume",
     ],
     interpolation: {
       escapeValue: false,

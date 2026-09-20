@@ -278,6 +278,7 @@ export function FriendGamePage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [moveHint, setMoveHint] = useState("");
+  const [cancellingInvite, setCancellingInvite] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [confirmingResign, setConfirmingResign] = useState(false);
   const [premove, setPremove] = useState<Premove | null>(null);
@@ -369,6 +370,20 @@ export function FriendGamePage() {
     }
   }
 
+  async function handleCancelInvite() {
+    if (!gameId || cancellingInvite) {
+      return;
+    }
+    try {
+      setCancellingInvite(true);
+      await api.post(`/games/${gameId}/cancel`);
+      navigate("/dashboard", { replace: true });
+    } catch (requestError: any) {
+      setError(getApiErrorMessage(requestError, t("errors.cancelFailed")));
+      setCancellingInvite(false);
+    }
+  }
+
   async function handleShareInvite() {
     if (!shareLink || !canNativeShare) {
       return;
@@ -432,16 +447,6 @@ export function FriendGamePage() {
     // t intentionally omitted: this should run once per finished game, not re-fire on language change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, user, localColor]);
-
-  useEffect(() => {
-    if (!gameEndModal) {
-      return;
-    }
-    const t = window.setTimeout(() => {
-      navigate("/dashboard", { replace: true });
-    }, 5000);
-    return () => window.clearTimeout(t);
-  }, [gameEndModal, navigate]);
 
   // A queued premove is dropped as soon as the game is no longer live, and Esc cancels it.
   useEffect(() => {
@@ -562,8 +567,13 @@ export function FriendGamePage() {
           }
         });
 
-        socketRef.current.on("game:removed", (payload: { gameId: string }) => {
+        socketRef.current.on("game:removed", (payload: { gameId: string; reason?: string }) => {
           if (!mounted || payload?.gameId !== gameId) {
+            return;
+          }
+          if (payload.reason === "expired") {
+            // Nobody joined within 10 minutes — send the creator to start a fresh game, with an explanation.
+            navigate("/new-game", { replace: true, state: { inviteExpired: true } });
             return;
           }
           navigate("/dashboard", { replace: true });
@@ -820,7 +830,7 @@ export function FriendGamePage() {
 
         {game ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-            <section className="mx-auto grid w-full max-w-[640px] gap-2" aria-label={t("header.title")}>
+            <section className="mx-auto grid w-full min-w-0 max-w-[640px] grid-cols-1 gap-2" aria-label={t("header.title")}>
               {renderStrip(topColor)}
               <Card className="overflow-hidden border-border/80 bg-card/80 p-2 backdrop-blur-sm">
                 <div className="board-shell mx-auto w-full">
@@ -910,9 +920,9 @@ export function FriendGamePage() {
               ) : null}
             </section>
 
-            <aside className="grid gap-4">
+            <aside className="grid min-w-0 grid-cols-1 gap-4">
               {game.status === "waiting" ? (
-                <Card className="border-primary/25 bg-card/80 backdrop-blur-sm">
+                <Card className="min-w-0 border-primary/25 bg-card/80 backdrop-blur-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Share2 className="h-4 w-4 text-primary" aria-hidden />
@@ -924,7 +934,7 @@ export function FriendGamePage() {
                     <div className="space-y-1.5">
                       <p className="text-xs font-medium text-muted-foreground">{t("invite.linkLabel")}</p>
                       <div
-                        className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2.5"
+                        className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2.5"
                         title={shareLink}
                       >
                         <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -981,6 +991,21 @@ export function FriendGamePage() {
                       <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
                       {t("invite.waitingHint")}
                     </div>
+
+                    <p className="text-xs text-muted-foreground">{t("invite.expiresHint")}</p>
+
+                    {localColor === "w" ? (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="w-full"
+                        disabled={cancellingInvite}
+                        onClick={() => void handleCancelInvite()}
+                      >
+                        <X className="mr-2 h-4 w-4" aria-hidden />
+                        {t("invite.cancelButton")}
+                      </Button>
+                    ) : null}
                   </CardContent>
                 </Card>
               ) : (
@@ -1147,9 +1172,6 @@ export function FriendGamePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-center text-xs text-muted-foreground sm:text-left">
-                {t("endModal.returning")}
-              </p>
               <Button
                 type="button"
                 className="w-full"

@@ -257,8 +257,44 @@ async function persistLiveState(gameId, runtime) {
       movesJson: runtime.moves,
       pgn: runtime.chess.pgn(),
     },
-    select: gameSelect,
+    select: { id: true },
   });
+}
+
+// Write-behind persistence for moves. The database is a network hop away (~250ms+), so a move is
+// broadcast to both players first and saved right after — the opponent no longer waits on Postgres.
+// Writes for one game are chained so they land in order, and each one snapshots the runtime when it
+// *executes*, so a queued older write can never overwrite a newer position. A failed write is retried
+// once; later moves rewrite the full history anyway, so a blip heals itself. Ending a game (mate,
+// resign, timeout, draw) awaits this chain first, so the final record is always complete.
+const persistChains = new Map();
+
+function schedulePersist(gameId, runtime) {
+  const previous = persistChains.get(gameId) ?? Promise.resolve();
+  const next = previous
+    .then(async () => {
+      try {
+        await persistLiveState(gameId, runtime);
+      } catch (firstError) {
+        console.error(`Persist failed for game ${gameId}, retrying:`, firstError.message);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await persistLiveState(gameId, runtime);
+      }
+    })
+    .catch((error) => {
+      console.error(`Could not persist live state for game ${gameId}:`, error);
+    })
+    .finally(() => {
+      if (persistChains.get(gameId) === next) {
+        persistChains.delete(gameId);
+      }
+    });
+  persistChains.set(gameId, next);
+  return next;
+}
+
+function flushPersist(gameId) {
+  return persistChains.get(gameId) ?? Promise.resolve();
 }
 
 function getTimeoutResult(color) {
@@ -266,6 +302,8 @@ function getTimeoutResult(color) {
 }
 
 async function finalizeGame(game, runtime, { result, reason }) {
+  // Let any in-flight move saves finish first so they can't land after (and undo) the final write.
+  await flushPersist(game.id);
   applyElapsedClock(runtime);
   runtime.activeSince = null;
   runtime.drawOffers = { w: false, b: false };
@@ -399,7 +437,8 @@ async function submitMove(gameId, userId, payload) {
     game.timeControl === "Freestyle" ? null : Date.now();
   runtime.drawOffers = { w: false, b: false };
 
-  await persistLiveState(game.id, runtime);
+  // Saved in the background — the move is broadcast without waiting on the database.
+  void schedulePersist(game.id, runtime);
 
   if (runtime.chess.isCheckmate()) {
     return finalizeGame(game, runtime, {

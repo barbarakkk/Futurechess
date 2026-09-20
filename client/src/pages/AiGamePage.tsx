@@ -27,6 +27,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { MoveList } from "../components/game/MoveList";
+import { ResumeGameBanners } from "../components/ResumeGameBanners";
 import { PlayerStrip } from "../components/game/PlayerStrip";
 import { api } from "../lib/api";
 import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
@@ -263,16 +264,6 @@ export function AiGamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
 
-  useEffect(() => {
-    if (!gameEndModal) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      navigate("/dashboard", { replace: true });
-    }, 5000);
-    return () => window.clearTimeout(timer);
-  }, [gameEndModal, navigate]);
-
   async function handleCreateGame() {
     try {
       setCreating(true);
@@ -456,6 +447,8 @@ export function AiGamePage() {
         </div>
 
         <section className="mx-auto max-w-2xl space-y-8">
+          <ResumeGameBanners />
+
           <header className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
               <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
@@ -607,7 +600,7 @@ export function AiGamePage() {
 
         {!loading && game ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-            <section className="mx-auto grid w-full max-w-[640px] gap-2" aria-label={t("play.title")}>
+            <section className="mx-auto grid w-full min-w-0 max-w-[640px] grid-cols-1 gap-2" aria-label={t("play.title")}>
               <PlayerStrip
                 name={topIsYou ? (user?.username ?? t("play.match.you")) : "Stockfish"}
                 subtitle={topSubtitle}
@@ -700,7 +693,7 @@ export function AiGamePage() {
               )}
             </section>
 
-            <aside className="grid gap-4">
+            <aside className="grid min-w-0 grid-cols-1 gap-4">
               <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-center gap-3">
@@ -845,9 +838,6 @@ export function AiGamePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-center text-xs text-muted-foreground sm:text-left">
-                {t("endModal.returning")}
-              </p>
               <Button
                 type="button"
                 className="w-full"

@@ -133,13 +133,14 @@ async function broadcastGameState(gameId) {
   io.to(getRoomName(gameId)).emit("game:state", state);
 }
 
-/** After a game row is deleted from the DB — tell clients still in the room */
-function emitGameRemoved(gameId) {
+/** After a game row is deleted from the DB — tell clients still in the room. `reason` is optional
+ * ("expired" | "cancelled") so the client can explain why the game disappeared. */
+function emitGameRemoved(gameId, reason) {
   if (!io) {
     return;
   }
 
-  io.to(getRoomName(gameId)).emit("game:removed", { gameId });
+  io.to(getRoomName(gameId)).emit("game:removed", { gameId, reason });
 }
 
 module.exports = {

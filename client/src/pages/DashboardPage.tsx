@@ -18,12 +18,12 @@ import {
   Trophy,
   Wallet,
   X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { ResumeGameBanners } from "../components/ResumeGameBanners";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
 import { cn, CURRENCY_SYMBOLS, formatDateTime } from "../lib/utils";
@@ -426,7 +426,6 @@ export function DashboardPage() {
   }
 
   const now = new Date().toISOString();
-  const activeGame = recentGames.find((g) => g.status === "active");
   const pendingRequests = coachBookings.filter((b) => b.status === "pending");
   const upcomingSessions = coachBookings.filter((b) => b.status === "confirmed" && new Date(b.slot.endTime) > new Date());
   const completedThisMonth = coachBookings.filter(
@@ -510,27 +509,7 @@ export function DashboardPage() {
           </div>
         </header>
 
-        {activeGame ? (
-          <div className="dashboard-in dashboard-lift flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.07] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_16px_32px_-20px_rgba(37,99,235,0.4)] backdrop-blur-xl">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
-                <Zap className="h-5 w-5 text-primary" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold tracking-[-0.005em]">
-                  {t("resumeGame.badge")} —{" "}
-                  {t("resumeGame.description", {
-                    timeControl: activeGame.timeControl,
-                    opponent: activeGame.opponentUsername ?? t("defaultPlayerName"),
-                  })}
-                </p>
-              </div>
-            </div>
-            <Button type="button" className="dashboard-press shrink-0" onClick={() => navigate(`/game/${activeGame.id}`)}>
-              {t("resumeGame.cta")}
-            </Button>
-          </div>
-        ) : null}
+        <ResumeGameBanners className="dashboard-in" />
 
         {isCoach && !loadingCoachExtras && !coachExtrasError && availabilityDaysThisMonth === 0 ? (
           <div className="dashboard-in flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-5 py-3.5">

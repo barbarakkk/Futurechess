@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Clock, Sparkles, Swords } from "lucide-react";
 import { Badge } from "../components/ui/badge";
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { ResumeGameBanners } from "../components/ResumeGameBanners";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
 
@@ -32,6 +33,7 @@ const controls: Array<{
 export function NewGamePage() {
   const { t } = useTranslation("newGame");
   const navigate = useNavigate();
+  const inviteExpired = Boolean((useLocation().state as { inviteExpired?: boolean } | null)?.inviteExpired);
   // NOTE: timeControl holds the literal English value ("Bullet" | "Blitz" | "Rapid" | "Classical" | "Freestyle")
   // sent verbatim to the API below — this must never be translated/localized.
   const [timeControl, setTimeControl] = useState<TimeControl>("Blitz");
@@ -63,6 +65,14 @@ export function NewGamePage() {
       </div>
 
       <section className="mx-auto max-w-2xl space-y-8">
+        {inviteExpired ? (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-sm font-medium text-amber-900" role="status">
+            {t("inviteExpired")}
+          </p>
+        ) : null}
+
+        <ResumeGameBanners />
+
         <header className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />

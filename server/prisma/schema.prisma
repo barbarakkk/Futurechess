@@ -48,6 +48,8 @@ model Game {
   pgn           String?
   startedAt     DateTime? @map("started_at")
   endedAt       DateTime? @map("ended_at")
+  // When the game/invite was created. Waiting invites that nobody joins are removed after 10 minutes.
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   whitePlayer   User?            @relation("white_games", fields: [whitePlayerId], references: [id], onDelete: SetNull)
   blackPlayer   User?            @relation("black_games", fields: [blackPlayerId], references: [id], onDelete: SetNull)
@@ -55,6 +57,7 @@ model Game {
 
   @@index([whitePlayerId])
   @@index([blackPlayerId])
+  @@index([status, createdAt])
   @@map("games")
 }
 

@@ -157,6 +157,43 @@ router.post("/", requireAuth, async (req, res, next) => {
   }
 });
 
+// The player's most recent AI game, if it is still unfinished — so the client can offer "resume"
+// after they leave the board. Only the *latest* game counts: once it ends (checkmate, resign, agreed
+// draw) nothing is shown, and older abandoned games never resurface. Games older than a week are
+// treated as abandoned. Declared before "/:id" so "active" isn't read as an id.
+const ACTIVE_AI_GAME_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+router.get("/active", requireAuth, async (req, res, next) => {
+  try {
+    const aiGame = await prisma.aIGame.findFirst({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const isStale =
+      aiGame && aiGame.createdAt.getTime() < Date.now() - ACTIVE_AI_GAME_MAX_AGE_MS;
+
+    if (!aiGame || aiGame.result || isStale) {
+      return res.json({ game: null });
+    }
+
+    const chess = parsePgn(aiGame.pgn ?? "");
+    const userTurn = aiGame.userColor === "white" ? "w" : "b";
+
+    res.json({
+      game: {
+        id: aiGame.id,
+        difficulty: aiGame.difficulty,
+        userColor: aiGame.userColor,
+        moveCount: chess.history().length,
+        isUserTurn: chess.turn() === userTurn,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
     const aiGame = await getOwnedAiGame(req.params.id, req.user.id);

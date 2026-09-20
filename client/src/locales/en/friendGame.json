@@ -25,7 +25,8 @@
     "sessionUnavailable": "Game session is unavailable",
     "actionFailed": "Action failed",
     "moveActionFailed": "Game action failed",
-    "moveRejected": "That move wasn't accepted."
+    "moveRejected": "That move wasn't accepted.",
+    "cancelFailed": "Could not cancel the invite."
   },
   "result": {
     "whiteWon": "White won",
@@ -75,7 +76,9 @@
     "copiedButton": "Copied!",
     "shareButton": "Share",
     "shareTitle": "Join my FutureChess game",
-    "waitingHint": "Waiting for an opponent to join..."
+    "waitingHint": "Waiting for an opponent to join...",
+    "cancelButton": "Cancel invite",
+    "expiresHint": "This invitation closes automatically after 10 minutes if nobody joins."
   },
   "moveHint": {
     "title": "Move not allowed"

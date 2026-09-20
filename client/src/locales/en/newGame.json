@@ -13,5 +13,6 @@
   },
   "createGame": "Create game",
   "creatingGame": "Creating game…",
-  "defaultError": "Could not create game. Please try again."
+  "defaultError": "Could not create game. Please try again.",
+  "inviteExpired": "Your invitation expired because nobody joined within 10 minutes. Start a new game whenever you're ready."
 }

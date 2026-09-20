@@ -5,6 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 const { broadcastGameState } = require("../realtime/socketHub");
 const { gameSelect, getGameState, upsertRuntime } = require("../realtime/gameRuntime");
 const { createHttpError } = require("../utils/createHttpError");
+const { expireIfStale, removeWaitingGame, waitingCutoff } = require("../services/waitingGameService");
 
 const router = Router();
 
@@ -66,7 +67,13 @@ router.post("/", requireAuth, async (req, res, next) => {
 router.get("/recent", requireAuth, async (req, res, next) => {
   try {
     const games = await prisma.game.findMany({
-      where: visibleParticipantGamesWhere(req.user.id),
+      where: {
+        AND: [
+          visibleParticipantGamesWhere(req.user.id),
+          // An invite past its 10 minutes is as good as gone even if the sweeper hasn't run yet.
+          { NOT: { status: "waiting", createdAt: { lt: waitingCutoff() } } },
+        ],
+      },
       orderBy: { startedAt: "desc" },
       take: 5,
       select: {
@@ -278,6 +285,10 @@ router.get("/stats", requireAuth, async (req, res, next) => {
 
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
+    if (await expireIfStale(req.params.id)) {
+      throw createHttpError(404, "Game not found");
+    }
+
     const game = await prisma.game.findUnique({
       where: { id: req.params.id },
       select: gameSelect,
@@ -350,8 +361,40 @@ router.delete("/:id", requireAuth, async (req, res, next) => {
   }
 });
 
+// Creator withdraws an invite nobody has accepted yet. The row is deleted (there is nothing to keep:
+// no opponent, no moves) and anyone with the page open is told via `game:removed`.
+router.post("/:id/cancel", requireAuth, async (req, res, next) => {
+  try {
+    const game = await prisma.game.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, whitePlayerId: true, status: true },
+    });
+
+    if (!game) {
+      throw createHttpError(404, "Game not found");
+    }
+
+    if (game.whitePlayerId !== req.user.id) {
+      throw createHttpError(403, "Only the player who created the invite can cancel it.");
+    }
+
+    const removed = await removeWaitingGame(game.id, "cancelled", { whitePlayerId: req.user.id });
+    if (!removed) {
+      throw createHttpError(400, "This game has already started, so the invite can't be cancelled.");
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/:id/join", requireAuth, async (req, res, next) => {
   try {
+    if (await expireIfStale(req.params.id)) {
+      throw createHttpError(404, "Game not found");
+    }
+
     const game = await prisma.game.findUnique({
       where: { id: req.params.id },
       select: gameSelect,

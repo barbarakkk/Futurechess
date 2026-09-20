@@ -1,0 +1,19 @@
+{
+  "friend": {
+    "title": "Online game in progress",
+    "subtitle": "{{timeControl}} vs {{opponent}}",
+    "opponentFallback": "your friend",
+    "waitingTitle": "Your invite is waiting for an opponent",
+    "waitingSubtitle": "{{timeControl}} game — share the link to start"
+  },
+  "ai": {
+    "title": "AI game in progress",
+    "subtitle": "vs Stockfish ({{difficulty}}) · {{count}} moves played",
+    "yourMove": "Your move",
+    "engineMove": "Stockfish is to move"
+  },
+  "cta": "Resume game",
+  "ctaWaiting": "Open game",
+  "cancelInvite": "Cancel invite",
+  "cancelError": "Could not cancel the invite. Please try again."
+}
