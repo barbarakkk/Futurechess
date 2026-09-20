@@ -6,16 +6,34 @@
     "difficulty": {
       "title": "Difficulty",
       "description": "Select how aggressively Stockfish will search.",
-      "easy": { "label": "Easy", "hint": "Perfect for beginners" },
-      "medium": { "label": "Medium", "hint": "A balanced challenge" },
-      "hard": { "label": "Hard", "hint": "For experienced players" }
+      "easy": {
+        "label": "Easy",
+        "hint": "Perfect for beginners"
+      },
+      "medium": {
+        "label": "Medium",
+        "hint": "A balanced challenge"
+      },
+      "hard": {
+        "label": "Hard",
+        "hint": "For experienced players"
+      }
     },
     "color": {
       "title": "Your color",
       "description": "White moves first; as Black, Stockfish opens.",
-      "white": { "label": "White", "hint": "Play first" },
-      "black": { "label": "Black", "hint": "AI plays first" },
-      "random": { "label": "Random", "hint": "Surprise me" }
+      "white": {
+        "label": "White",
+        "hint": "Play first"
+      },
+      "black": {
+        "label": "Black",
+        "hint": "AI plays first"
+      },
+      "random": {
+        "label": "Random",
+        "hint": "Surprise me"
+      }
     },
     "startButton": "Start AI game",
     "startingButton": "Creating AI game…",
@@ -47,6 +65,37 @@
       "black": "Black won",
       "draw": "Draw",
       "inProgress": "In progress"
+    },
+    "flip": "Flip board",
+    "level": "Level",
+    "moveNumber": "Move",
+    "yourTurnHint": "Drag a piece to a highlighted square.",
+    "inCheckHint": "You are in check — protect your king.",
+    "aiTurnHint": "Replies usually take a moment.",
+    "thinking": "Stockfish is thinking",
+    "moves": {
+      "title": "Moves",
+      "empty": "No moves yet. Make the first move.",
+      "ply": "{{count}} ply"
+    },
+    "actions": {
+      "title": "Game",
+      "resign": "Resign",
+      "offerDraw": "Offer draw",
+      "resignPrompt": "Resign this game? Stockfish wins and it counts as a loss.",
+      "keepPlaying": "Keep playing",
+      "confirmResign": "Yes, resign",
+      "drawDeclined": "Stockfish declined the draw offer.",
+      "resignError": "Could not resign the game.",
+      "drawError": "Could not send the draw offer."
+    },
+    "premove": {
+      "label": "Premove",
+      "hint": "Stockfish is thinking — drag one of your pieces to queue a premove.",
+      "playsOnReply": "plays as soon as Stockfish replies",
+      "cancel": "Cancel",
+      "cancelAria": "Cancel premove",
+      "cancelledIllegal": "Premove cancelled — it is no longer legal."
     }
   },
   "endModal": {
@@ -65,6 +114,14 @@
       "generic": "Stockfish won this game."
     },
     "returning": "Returning to your dashboard in 5 seconds…",
-    "backToDashboard": "Back to dashboard"
+    "backToDashboard": "Back to dashboard",
+    "resign": {
+      "title": "You resigned",
+      "body": "Stockfish wins by resignation."
+    },
+    "drawAgreed": {
+      "title": "Draw agreed",
+      "body": "Stockfish accepted your draw offer."
+    }
   }
 }

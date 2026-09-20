@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
+  ArrowUpDown,
   ChevronRight,
   Cpu,
+  Flag,
   Gauge,
+  Handshake,
   Loader2,
   Palette,
   Sparkles,
   Timer,
+  X,
+  Zap,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -21,7 +26,12 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { MoveList } from "../components/game/MoveList";
+import { PlayerStrip } from "../components/game/PlayerStrip";
 import { api } from "../lib/api";
+import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
+import { getCaptureSummary } from "../lib/chessCaptures";
+import { isPremoveLegal, PREMOVE_ARROW_COLOR, PREMOVE_SQUARE_STYLE, type Premove } from "../lib/premove";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
 import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
@@ -68,9 +78,20 @@ function formatResult(result: string | null, t: TFunction) {
 
 type GameEndModalCopy = { title: string; body: string; kind: "win" | "loss" | "draw" };
 
-// AI games have no "resign"/"timeout" mechanic (HTTP-only, no clocks) — the only endings are
-// checkmate or a chess-rules draw, so this is simpler than FriendGamePage's equivalent.
-function buildAiGameEndModalCopy(t: TFunction, userColor: UserColor, game: AiGameState): GameEndModalCopy {
+// AI games have no clocks (HTTP-only) — endings are checkmate, a chess-rules draw, resignation or an
+// accepted draw offer. The last two can't be inferred from the PGN, so callers pass `endedBy`.
+function buildAiGameEndModalCopy(
+  t: TFunction,
+  userColor: UserColor,
+  game: AiGameState,
+  endedBy: "resign" | "drawAgreed" | null = null,
+): GameEndModalCopy {
+  if (endedBy === "resign") {
+    return { title: t("endModal.resign.title"), body: t("endModal.resign.body"), kind: "loss" };
+  }
+  if (endedBy === "drawAgreed") {
+    return { title: t("endModal.drawAgreed.title"), body: t("endModal.drawAgreed.body"), kind: "draw" };
+  }
   if (game.result === "1/2-1/2") {
     return { title: t("endModal.draw.title"), body: t("endModal.draw.body"), kind: "draw" };
   }
@@ -124,6 +145,11 @@ export function AiGamePage() {
   const [lastAction, setLastAction] = useState("");
   const hasShownEndModal = useRef(false);
   const [gameEndModal, setGameEndModal] = useState<GameEndModalCopy | null>(null);
+  const [flipped, setFlipped] = useState(false);
+  const [confirmingResign, setConfirmingResign] = useState(false);
+  const [actionNote, setActionNote] = useState("");
+  const [premove, setPremove] = useState<Premove | null>(null);
+  const endedBy = useRef<"resign" | "drawAgreed" | null>(null);
 
   const isCreateMode = gameId === "new" || !gameId;
   const playerTurn = game?.turn === (game?.userColor === "white" ? "w" : "b");
@@ -139,6 +165,40 @@ export function AiGamePage() {
 
     return playerTurn ? t("play.match.yourTurn") : t("play.match.aiTurn");
   }, [game, playerTurn, t]);
+
+  const statusHint = useMemo(() => {
+    if (!game || game.result) {
+      return "";
+    }
+    if (!playerTurn) {
+      return t("play.aiTurnHint");
+    }
+    try {
+      const chess = new Chess(game.fen);
+      return chess.inCheck() ? t("play.inCheckHint") : t("play.yourTurnHint");
+    } catch {
+      return t("play.yourTurnHint");
+    }
+  }, [game, playerTurn, t]);
+
+  const captures = useMemo(() => getCaptureSummary(game?.fen ?? ""), [game?.fen]);
+
+  const userIsWhite = game?.userColor === "white";
+  const aiThinking = Boolean(game && acting && !game.result && !playerTurn);
+  const whiteAtBottom = userIsWhite !== flipped;
+  const boardOrientation: "white" | "black" = whiteAtBottom ? "white" : "black";
+  const topColor: "w" | "b" = boardOrientation === "white" ? "b" : "w";
+  const bottomColor: "w" | "b" = topColor === "w" ? "b" : "w";
+  const userSide: "w" | "b" = userIsWhite ? "w" : "b";
+  const topIsYou = topColor === userSide;
+  const bottomIsYou = bottomColor === userSide;
+  const sideLabel = (color: "w" | "b") => t(`setup.color.${color === "w" ? "white" : "black"}.label`);
+  const topSubtitle = topIsYou
+    ? `${sideLabel(topColor)} · ${t("play.match.you")}`
+    : `${sideLabel(topColor)} · ${t(`setup.difficulty.${game?.difficulty ?? "medium"}.label`)}`;
+  const bottomSubtitle = bottomIsYou
+    ? `${sideLabel(bottomColor)} · ${t("play.match.you")}`
+    : `${sideLabel(bottomColor)} · ${t(`setup.difficulty.${game?.difficulty ?? "medium"}.label`)}`;
 
   useEffect(() => {
     if (isCreateMode || !gameId) {
@@ -182,7 +242,12 @@ export function AiGamePage() {
 
   useEffect(() => {
     hasShownEndModal.current = false;
+    endedBy.current = null;
     setGameEndModal(null);
+    setFlipped(false);
+    setConfirmingResign(false);
+    setActionNote("");
+    setPremove(null);
   }, [gameId]);
 
   useEffect(() => {
@@ -193,7 +258,7 @@ export function AiGamePage() {
       return;
     }
     hasShownEndModal.current = true;
-    setGameEndModal(buildAiGameEndModalCopy(t, game.userColor, game));
+    setGameEndModal(buildAiGameEndModalCopy(t, game.userColor, game, endedBy.current));
     // t intentionally omitted: this should run once per finished game, not re-fire on language change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
@@ -230,6 +295,96 @@ export function AiGamePage() {
       setCreating(false);
     }
   }
+
+  async function handleResign() {
+    if (!game || acting || game.result) {
+      return;
+    }
+    try {
+      setActing(true);
+      setError("");
+      const response = await api.post(`/ai-games/${game.id}/resign`);
+      endedBy.current = "resign";
+      setConfirmingResign(false);
+      setGame(response.data.game as AiGameState);
+    } catch (requestError: any) {
+      setError(getApiErrorMessage(requestError, t("play.actions.resignError")));
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleOfferDraw() {
+    if (!game || acting || game.result) {
+      return;
+    }
+    try {
+      setActing(true);
+      setError("");
+      setActionNote("");
+      const response = await api.post(`/ai-games/${game.id}/draw`);
+      if (response.data.accepted) {
+        endedBy.current = "drawAgreed";
+      } else {
+        setActionNote(t("play.actions.drawDeclined"));
+      }
+      setGame(response.data.game as AiGameState);
+    } catch (requestError: any) {
+      setError(getApiErrorMessage(requestError, t("play.actions.drawError")));
+    } finally {
+      setActing(false);
+    }
+  }
+
+  const canPremove = Boolean(game) && !game?.result && !playerTurn;
+
+  // A queued premove is dropped once the game is over, and Esc cancels it.
+  useEffect(() => {
+    if (premove && game?.result) {
+      setPremove(null);
+    }
+  }, [premove, game?.result]);
+
+  useEffect(() => {
+    if (!premove) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPremove(null);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [premove]);
+
+  // Fires a beat after Stockfish's reply lands so you still see it. Re-validated against the real
+  // position here; the server validates it again on /move.
+  useEffect(() => {
+    if (!premove || !game || game.result || !playerTurn || acting) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setPremove(null);
+      try {
+        const chess = new Chess(game.fen);
+        const legal = chess
+          .moves({ square: premove.from as Square, verbose: true })
+          .some((move) => move.to === premove.to);
+        const piece = chess.get(premove.from as Square);
+        if (legal && piece) {
+          void handleMove(premove.from, premove.to, `${piece.color}${piece.type}`);
+          return;
+        }
+      } catch {
+        // Fall through to the cancelled message below.
+      }
+      setActionNote(t("play.premove.cancelledIllegal"));
+    }, 180);
+    return () => window.clearTimeout(timer);
+    // handleMove/t intentionally omitted: re-arm only when the position or premove changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [premove, playerTurn, acting, game?.fen]);
 
   async function handleMove(from: string, to: string, pieceType: string) {
     if (!game || acting || !playerTurn || Boolean(game.result)) {
@@ -268,6 +423,7 @@ export function AiGamePage() {
     try {
       setActing(true);
       setError("");
+      setActionNote("");
       const response = await api.post(`/ai-games/${game.id}/move`, {
         from,
         to,
@@ -450,67 +606,217 @@ export function AiGamePage() {
         ) : null}
 
         {!loading && game ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start">
-            <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{t("play.match.title")}</CardTitle>
-                <CardDescription>{t("play.match.description")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">{t("play.match.you")}</span>
-                  <span className="font-medium">
-                    {user?.username ?? t("play.match.you")} (
-                    {t(`setup.color.${game.userColor}.label`)})
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">{t("play.match.opponent")}</span>
-                  <span className="font-medium">
-                    {t("play.match.opponentName", {
-                      difficulty: t(`setup.difficulty.${game.difficulty}.label`),
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2 border-t border-border pt-3">
-                  <Timer className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <span>{statusText}</span>
-                </div>
-                <p className="border-t border-border pt-3 text-muted-foreground">
-                  {t("play.match.result")}{" "}
-                  <span className="font-medium text-foreground">
-                    {formatResult(game.result, t)}
-                  </span>
-                </p>
-                {lastAction ? (
-                  <p className="rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-                    {lastAction}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+            <section className="mx-auto grid w-full max-w-[640px] gap-2" aria-label={t("play.title")}>
+              <PlayerStrip
+                name={topIsYou ? (user?.username ?? t("play.match.you")) : "Stockfish"}
+                subtitle={topSubtitle}
+                isYou={topIsYou}
+                isTurn={!game.result && game.turn === topColor}
+                thinking={!topIsYou && aiThinking}
+                thinkingLabel={t("play.thinking")}
+                captured={captures.capturedBy[topColor]}
+                lead={captures.lead[topColor]}
+              />
+              <Card className="overflow-hidden border-border/80 bg-card/80 p-2 backdrop-blur-sm">
+                <div className="board-shell mx-auto w-full">
+                  <Chessboard
+                    options={{
+                      position: game.fen,
+                      boardOrientation,
+                      lightSquareStyle,
+                      darkSquareStyle,
+                      ...BOARD_NOTATION_OPTIONS,
+                      // Own pieces stay draggable while Stockfish thinks: that drop queues a premove.
+                      allowDragging: (!acting && !game.result && playerTurn) || canPremove,
+                      canDragPiece: ({ piece }) => piece.pieceType[0].toLowerCase() === userSide,
+                      squareStyles: premove
+                        ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
+                        : {},
+                      arrows: premove
+                        ? [{ startSquare: premove.from, endSquare: premove.to, color: PREMOVE_ARROW_COLOR }]
+                        : [],
+                      // Clicking the board cancels a queued premove.
+                      onSquareClick: () => {
+                        if (premove) {
+                          setPremove(null);
+                        }
+                      },
+                      onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
+                        if (!sourceSquare || !targetSquare) {
+                          return false;
+                        }
 
-            <Card className="overflow-hidden border-border/80 bg-card/80 p-4 backdrop-blur-sm">
-              <div className="board-shell mx-auto w-full max-w-[560px]">
-                <Chessboard
-                  options={{
-                    position: game.fen,
-                    boardOrientation: game.userColor === "black" ? "black" : "white",
-                    lightSquareStyle,
-                    darkSquareStyle,
-                    allowDragging: !acting && !game.result && playerTurn,
-                    onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
-                      if (!sourceSquare || !targetSquare) {
+                        if (playerTurn) {
+                          void handleMove(sourceSquare, targetSquare, piece.pieceType);
+                        } else if (canPremove && isPremoveLegal(game.fen, userSide, sourceSquare, targetSquare)) {
+                          setPremove({ from: sourceSquare, to: targetSquare });
+                        }
                         return false;
-                      }
+                      },
+                    }}
+                  />
+                </div>
+              </Card>
+              <PlayerStrip
+                name={bottomIsYou ? (user?.username ?? t("play.match.you")) : "Stockfish"}
+                subtitle={bottomSubtitle}
+                isYou={bottomIsYou}
+                isTurn={!game.result && game.turn === bottomColor}
+                thinking={!bottomIsYou && aiThinking}
+                thinkingLabel={t("play.thinking")}
+                captured={captures.capturedBy[bottomColor]}
+                lead={captures.lead[bottomColor]}
+              />
+              {game.result ? null : (
+                <div className="flex min-h-9 items-center px-1" aria-live="polite">
+                  {premove ? (
+                    <div className="flex w-full items-center gap-2 rounded-lg bg-blue-600/10 px-3 py-1.5 text-sm text-blue-700">
+                      <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="font-semibold">{t("play.premove.label")}</span>
+                      <span className="font-mono">
+                        {premove.from} → {premove.to}
+                      </span>
+                      <span className="hidden text-xs text-blue-700/70 sm:inline">
+                        {t("play.premove.playsOnReply")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPremove(null)}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold hover:bg-blue-600/15"
+                        aria-label={t("play.premove.cancelAria")}
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                        {t("play.premove.cancel")}
+                      </button>
+                    </div>
+                  ) : canPremove ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      {t("play.premove.hint")}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </section>
 
-                      void handleMove(sourceSquare, targetSquare, piece.pieceType);
-                      return false;
-                    },
-                  }}
-                />
-              </div>
-            </Card>
+            <aside className="grid gap-4">
+              <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-accent">
+                      <Timer className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div>
+                      <p className="font-semibold leading-tight">{statusText}</p>
+                      <p className="text-sm text-muted-foreground">{statusHint}</p>
+                    </div>
+                  </div>
+                  <dl className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="rounded-xl bg-secondary/60 px-3 py-2">
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t("play.level")}
+                      </dt>
+                      <dd className="font-semibold">{t(`setup.difficulty.${game.difficulty}.label`)}</dd>
+                    </div>
+                    <div className="rounded-xl bg-secondary/60 px-3 py-2">
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t("play.match.you")}
+                      </dt>
+                      <dd className="font-semibold">{t(`setup.color.${game.userColor}.label`)}</dd>
+                    </div>
+                    <div className="rounded-xl bg-secondary/60 px-3 py-2">
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t("play.moveNumber")}
+                      </dt>
+                      <dd className="font-semibold">{Math.floor(game.moves.length / 2) + 1}</dd>
+                    </div>
+                  </dl>
+                  {lastAction ? (
+                    <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">{lastAction}</p>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-4">
+                  <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>{t("play.moves.title")}</span>
+                    {game.moves.length ? <span>{t("play.moves.ply", { count: game.moves.length })}</span> : null}
+                  </div>
+                  <MoveList sans={game.moves.map((move) => move.san)} emptyLabel={t("play.moves.empty")} />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+                <CardContent className="space-y-3 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("play.actions.title")}
+                  </p>
+                  {confirmingResign && !game.result ? (
+                    <div
+                      className="space-y-3 rounded-xl bg-red-50 p-3 text-red-900"
+                      role="alertdialog"
+                      aria-label={t("play.actions.resign")}
+                    >
+                      <p className="text-sm font-medium">{t("play.actions.resignPrompt")}</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setConfirmingResign(false)}
+                        >
+                          {t("play.actions.keepPlaying")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                          disabled={acting}
+                          onClick={handleResign}
+                        >
+                          {t("play.actions.confirmResign")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={acting || Boolean(game.result)}
+                        onClick={() => {
+                          setActionNote("");
+                          setConfirmingResign(true);
+                        }}
+                      >
+                        <Flag className="mr-2 h-4 w-4" aria-hidden />
+                        {t("play.actions.resign")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={acting || Boolean(game.result)}
+                        onClick={handleOfferDraw}
+                      >
+                        <Handshake className="mr-2 h-4 w-4" aria-hidden />
+                        {t("play.actions.offerDraw")}
+                      </Button>
+                    </div>
+                  )}
+                  {actionNote ? (
+                    <p className="rounded-lg bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">{actionNote}</p>
+                  ) : null}
+                  <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setFlipped((v) => !v)}>
+                    <ArrowUpDown className="mr-2 h-4 w-4" aria-hidden />
+                    {t("play.flip")}
+                  </Button>
+                </CardContent>
+              </Card>
+            </aside>
           </div>
         ) : null}
       </div>

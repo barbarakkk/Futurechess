@@ -220,4 +220,69 @@ router.post("/:id/move", requireAuth, async (req, res, next) => {
   }
 });
 
+router.post("/:id/resign", requireAuth, async (req, res, next) => {
+  try {
+    const aiGame = await getOwnedAiGame(req.params.id, req.user.id);
+
+    if (aiGame.result) {
+      throw createHttpError(400, "Game is already finished");
+    }
+
+    const chess = parsePgn(aiGame.pgn ?? "");
+    const result = aiGame.userColor === "white" ? "0-1" : "1-0";
+
+    const updated = await prisma.aIGame.update({
+      where: { id: aiGame.id },
+      data: { result },
+    });
+
+    res.json({ game: toAiGameState(updated, chess) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const MIN_PLIES_FOR_DRAW = 10;
+const MAX_MATERIAL_GAP_FOR_DRAW = 1;
+
+function getMaterialGap(chess) {
+  const totals = { w: 0, b: 0 };
+  for (const row of chess.board()) {
+    for (const piece of row) {
+      if (piece) {
+        totals[piece.color] += PIECE_VALUES[piece.type];
+      }
+    }
+  }
+  return Math.abs(totals.w - totals.b);
+}
+
+// The engine accepts a draw only once the game has developed and material is roughly level.
+router.post("/:id/draw", requireAuth, async (req, res, next) => {
+  try {
+    const aiGame = await getOwnedAiGame(req.params.id, req.user.id);
+
+    if (aiGame.result) {
+      throw createHttpError(400, "Game is already finished");
+    }
+
+    const chess = parsePgn(aiGame.pgn ?? "");
+    const accepted =
+      chess.history().length >= MIN_PLIES_FOR_DRAW &&
+      getMaterialGap(chess) <= MAX_MATERIAL_GAP_FOR_DRAW;
+
+    const updated = accepted
+      ? await prisma.aIGame.update({
+          where: { id: aiGame.id },
+          data: { result: "1/2-1/2" },
+        })
+      : aiGame;
+
+    res.json({ accepted, game: toAiGameState(updated, chess) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = { aiGameRouter: router };

@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Clock, LayoutGrid, List, Search, Sparkles, Star, Wallet } from "lucide-react";
+import { Clock, LayoutGrid, List, Search, Sparkles, Star } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
-import { cn, formatHourlyRate } from "../lib/utils";
+import { cn } from "../lib/utils";
 
 type Coach = {
   id: string;
@@ -78,52 +78,55 @@ function CoachAvatar({ coach, className }: { coach: Coach; className: string }) 
 function CoachGridCard({ coach, t }: { coach: Coach; t: TFunction<"coaches"> }) {
   return (
     <Card className="flex flex-col border-border/80 bg-card/80 backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/35 hover:shadow-soft">
-      <CardContent className="flex flex-1 flex-col gap-4 p-5">
-        <div className="flex items-start gap-3">
-          <CoachAvatar coach={coach} className="h-14 w-14 text-base" />
-          <div className="min-w-0 flex-grow">
-            <p className="truncate font-semibold">
+      <CardContent className="flex flex-1 flex-col gap-4 p-4">
+        <div className="flex items-center gap-3">
+          <CoachAvatar coach={coach} className="h-12 w-12 text-sm" />
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-semibold leading-tight">
               {coach.name} {coach.surname}
             </p>
-            <p className="truncate text-sm text-muted-foreground">{coach.title}</p>
+            {coach.title ? (
+              <span className="mt-1 inline-flex rounded bg-accent/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-wide text-accent">
+                {coach.title}
+              </span>
+            ) : null}
           </div>
-          {coach.fideRating ? (
-            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">
-              <Star className="h-3 w-3" aria-hidden />
-              {t("directory.rating", { rating: coach.fideRating })}
-            </span>
-          ) : null}
         </div>
 
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <Badge variant="outline" className="gap-1.5 font-medium">
-            <Clock className="h-3 w-3" aria-hidden />
-            {t("directory.experience", { years: coach.experienceYears })}
-          </Badge>
-          {coach.hourlyRate ? (
-            <Badge variant="secondary" className="gap-1.5 font-bold text-foreground">
-              <Wallet className="h-3 w-3" aria-hidden />
-              {t("directory.hourlyRate", {
-                rate: formatHourlyRate(coach.hourlyRate, coach.hourlyRateCurrency),
-              })}
-            </Badge>
-          ) : null}
-        </div>
+        <dl className="grid grid-cols-2 divide-x divide-border/70 rounded-lg bg-secondary/50 py-2">
+          <div className="px-3">
+            <dt className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <Star className="h-3 w-3" aria-hidden />
+              {t("directory.stat.rating")}
+            </dt>
+            <dd className="text-sm font-semibold tabular-nums">{coach.fideRating ?? "—"}</dd>
+          </div>
+          <div className="px-3">
+            <dt className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <Clock className="h-3 w-3" aria-hidden />
+              {t("directory.stat.experience")}
+            </dt>
+            <dd className="text-sm font-semibold tabular-nums">
+              {t("directory.stat.years", { years: coach.experienceYears })}
+            </dd>
+          </div>
+        </dl>
 
         {coach.specialties.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {coach.specialties.map((specialty) => (
-              <Badge key={specialty} variant="secondary">
+              <Badge key={specialty} variant="secondary" className="text-xs">
                 {specialty}
               </Badge>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-auto pt-2">
+        <div className="mt-auto">
           <Link to={`/coaches/${coach.id}`}>
             <Button
               type="button"
+              size="sm"
               className="w-full transition-transform duration-150 ease-out active:scale-[0.97]"
             >
               {t("directory.viewProfile")}
@@ -172,13 +175,6 @@ function CoachListRow({ coach, t }: { coach: Coach; t: TFunction<"coaches"> }) {
           <span className="whitespace-nowrap text-xs text-muted-foreground">
             {t("directory.experience", { years: coach.experienceYears })}
           </span>
-          {coach.hourlyRate ? (
-            <span className="whitespace-nowrap text-sm font-bold">
-              {t("directory.hourlyRate", {
-                rate: formatHourlyRate(coach.hourlyRate, coach.hourlyRateCurrency),
-              })}
-            </span>
-          ) : null}
         </div>
 
         <Link to={`/coaches/${coach.id}`} className="shrink-0">

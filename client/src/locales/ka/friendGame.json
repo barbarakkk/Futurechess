@@ -2,7 +2,9 @@
   "header": {
     "badge": "მეგობრული თამაში",
     "title": "თამაში მეგობართან",
-    "gameId": "თამაშის ID: {{id}}"
+    "gameId": "თამაშის ID: {{id}}",
+    "versus": "{{name}}-ს წინააღმდეგ",
+    "badgeWithTime": "{{badge}} · {{timeControl}}"
   },
   "status": {
     "waiting": "მოლოდინში",
@@ -49,7 +51,8 @@
   "clocks": {
     "white": "თეთრი",
     "black": "შავი",
-    "running": "მიდის"
+    "running": "მიდის",
+    "thinking": "ფიქრობს"
   },
   "players": {
     "title": "მოთამაშეები",
@@ -57,7 +60,8 @@
     "black": "შავი",
     "waitingPlaceholder": "მოლოდინშია...",
     "resultLabel": "შედეგი:",
-    "drawOfferPending": "{{color}} სთავაზობს ფრეს."
+    "drawOfferPending": "{{color}} სთავაზობს ფრეს.",
+    "you": "შენ"
   },
   "invite": {
     "title": "მოიწვიე მეგობარი",
@@ -81,7 +85,13 @@
     "resign": "დანებება",
     "offerDraw": "ფრეს შეთავაზება",
     "acceptDraw": "ფრეზე დათანხმება",
-    "declineDraw": "ფრეზე უარი"
+    "declineDraw": "ფრეზე უარი",
+    "flip": "დაფის შებრუნება",
+    "offerSent": "შეთავაზება გაგზავნილია",
+    "keepPlaying": "თამაშის გაგრძელება",
+    "confirmResign": "დიახ, დანებება",
+    "resignPrompt": "დანებდე ამ თამაშში? მოწინააღმდეგე მოიგებს და ეს დაგეთვლება წაგებად.",
+    "drawOfferFrom": "{{name}} სთავაზობს ფრეს"
   },
   "endModal": {
     "opponentFallback": "შენი მოწინააღმდეგე",
@@ -110,5 +120,19 @@
     },
     "returning": "დაშბორდზე დაბრუნება 5 წამში…",
     "backToDashboard": "დაშბორდზე დაბრუნება"
+  },
+  "moves": {
+    "title": "სვლები",
+    "empty": "სვლები ჯერ არ არის.",
+    "ply": "{{count}} ნახევარსვლა"
+  },
+  "premove": {
+    "label": "წინასწარი სვლა",
+    "hint": "{{name}} ფიქრობს — გადაიტანე შენი ფიგურა და წინასწარ დააყენე სვლა.",
+    "hintGeneric": "მოწინააღმდეგე ფიქრობს — გადაიტანე შენი ფიგურა და წინასწარ დააყენე სვლა.",
+    "playsOnMove": "შესრულდება მისი სვლისთანავე",
+    "cancel": "გაუქმება",
+    "cancelAria": "წინასწარი სვლის გაუქმება",
+    "cancelledIllegal": "წინასწარი სვლა გაუქმდა — ის აღარ არის დასაშვები."
   }
 }

@@ -60,8 +60,10 @@ a:hover {
 
 /* Landing page — scoped visuals + motion */
 .landing-page {
-  --font-display: "Syne", system-ui, sans-serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
+  /* Syne / DM Sans have no Georgian glyphs — Noto Sans Georgian is next so Georgian text renders in a
+     matching-weight face instead of a wide system fallback. */
+  --font-display: "Syne", "Noto Sans Georgian", system-ui, sans-serif;
+  --font-body: "DM Sans", "Noto Sans Georgian", system-ui, sans-serif;
   font-family: var(--font-body);
 }
 

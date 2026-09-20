@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Chessboard, ChessboardProvider, SparePiece } from "react-chessboard";
 import type { ChessboardOptions } from "react-chessboard";
-import { Eraser, Grid2x2 } from "lucide-react";
+import { Eraser, Grid2x2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useBoardTheme } from "../hooks/useBoardTheme";
+import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
 import { cn } from "../lib/utils";
 
 type Position = Record<string, { pieceType: string }>;
@@ -13,16 +14,31 @@ type Position = Record<string, { pieceType: string }>;
 const WHITE_PIECES = ["wK", "wQ", "wR", "wB", "wN", "wP"];
 const BLACK_PIECES = ["bK", "bQ", "bR", "bB", "bN", "bP"];
 
+const BACK_RANK = ["R", "N", "B", "Q", "K", "B", "N", "R"];
+
+// Standard chess starting position in react-chessboard's object format.
+function createStartingPosition(): Position {
+  const position: Position = {};
+  "abcdefgh".split("").forEach((file, index) => {
+    position[`${file}1`] = { pieceType: `w${BACK_RANK[index]}` };
+    position[`${file}2`] = { pieceType: "wP" };
+    position[`${file}7`] = { pieceType: "bP" };
+    position[`${file}8`] = { pieceType: `b${BACK_RANK[index]}` };
+  });
+  return position;
+}
+
 export function BoardPage() {
   const { t } = useTranslation("board");
   const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
-  const [position, setPosition] = useState<Position>({});
+  const [position, setPosition] = useState<Position>(createStartingPosition);
   const [selected, setSelected] = useState<string | null>(null);
 
   const options: ChessboardOptions = {
     position,
     lightSquareStyle,
     darkSquareStyle,
+    ...BOARD_NOTATION_OPTIONS,
     allowDrawingArrows: false,
     showAnimations: false,
     onPieceClick: ({ isSparePiece, piece }) => {
@@ -53,6 +69,11 @@ export function BoardPage() {
 
   const clear = () => {
     setPosition({});
+    setSelected(null);
+  };
+
+  const resetPieces = () => {
+    setPosition(createStartingPosition());
     setSelected(null);
   };
 
@@ -99,6 +120,10 @@ export function BoardPage() {
           <Button type="button" variant="secondary" size="sm" onClick={clear}>
             <Eraser className="mr-2 h-4 w-4" aria-hidden />
             {t("clear")}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={resetPieces}>
+            <RotateCcw className="mr-2 h-4 w-4" aria-hidden />
+            {t("reset")}
           </Button>
         </div>
         <p className="text-center text-xs text-muted-foreground">{t("palette.hint")}</p>

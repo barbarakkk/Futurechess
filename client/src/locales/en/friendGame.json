@@ -2,7 +2,9 @@
   "header": {
     "badge": "Friend match",
     "title": "Friend game",
-    "gameId": "Game ID: {{id}}"
+    "gameId": "Game ID: {{id}}",
+    "versus": "vs {{name}}",
+    "badgeWithTime": "{{badge}} · {{timeControl}}"
   },
   "status": {
     "waiting": "Waiting",
@@ -49,7 +51,8 @@
   "clocks": {
     "white": "White",
     "black": "Black",
-    "running": "Running"
+    "running": "Running",
+    "thinking": "thinking"
   },
   "players": {
     "title": "Players",
@@ -57,7 +60,8 @@
     "black": "Black",
     "waitingPlaceholder": "Waiting...",
     "resultLabel": "Result:",
-    "drawOfferPending": "Draw offer pending from {{color}}."
+    "drawOfferPending": "Draw offer pending from {{color}}.",
+    "you": "You"
   },
   "invite": {
     "title": "Invite a friend",
@@ -81,7 +85,13 @@
     "resign": "Resign",
     "offerDraw": "Offer draw",
     "acceptDraw": "Accept draw",
-    "declineDraw": "Decline draw"
+    "declineDraw": "Decline draw",
+    "flip": "Flip board",
+    "offerSent": "Offer sent",
+    "keepPlaying": "Keep playing",
+    "confirmResign": "Yes, resign",
+    "resignPrompt": "Resign this game? Your opponent wins and it counts as a loss.",
+    "drawOfferFrom": "{{name}} offers a draw"
   },
   "endModal": {
     "opponentFallback": "Your opponent",
@@ -110,5 +120,19 @@
     },
     "returning": "Returning to your dashboard in 5 seconds…",
     "backToDashboard": "Back to dashboard"
+  },
+  "moves": {
+    "title": "Moves",
+    "empty": "No moves yet.",
+    "ply": "{{count}} ply"
+  },
+  "premove": {
+    "label": "Premove",
+    "hint": "{{name}} is thinking — drag one of your pieces to queue a premove.",
+    "hintGeneric": "Opponent is thinking — drag one of your pieces to queue a premove.",
+    "playsOnMove": "plays the moment they move",
+    "cancel": "Cancel",
+    "cancelAria": "Cancel premove",
+    "cancelledIllegal": "Premove cancelled — it is no longer legal."
   }
 }

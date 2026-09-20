@@ -2,6 +2,7 @@
   "title": "Chess Board",
   "subtitle": "A free board for explaining moves and positions. No rules, no turns.",
   "clear": "Clear board",
+  "reset": "Starting position",
   "palette": {
     "title": "Pieces",
     "hint": "Drag a piece onto the board, or click a piece and then a square. Drag a piece off the board to remove it.",

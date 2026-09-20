@@ -17,7 +17,12 @@
     "viewList": "List",
     "resultsCount_one": "{{count}} coach available",
     "resultsCount_other": "{{count}} coaches available",
-    "searchEmpty": "No coaches match \"{{query}}\". Try a different name or specialty."
+    "searchEmpty": "No coaches match \"{{query}}\". Try a different name or specialty.",
+    "stat": {
+      "rating": "FIDE rating",
+      "experience": "Experience",
+      "years": "{{years}} yrs"
+    }
   },
   "detail": {
     "backLink": "Back to coaches",

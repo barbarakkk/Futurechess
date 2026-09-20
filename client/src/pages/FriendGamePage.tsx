@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
+  ArrowUpDown,
   Check,
-  Clock,
   Copy,
+  Flag,
+  Handshake,
   Link2,
   Loader2,
   Share2,
   Swords,
-  Timer,
-  Users,
   WifiOff,
+  X,
+  Zap,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -25,8 +27,13 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { MoveList } from "../components/game/MoveList";
+import { PlayerStrip } from "../components/game/PlayerStrip";
 import { api } from "../lib/api";
+import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
+import { getCaptureSummary } from "../lib/chessCaptures";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
+import { isPremoveLegal, PREMOVE_ARROW_COLOR, PREMOVE_SQUARE_STYLE, type Premove } from "../lib/premove";
 import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
 
@@ -76,25 +83,23 @@ function formatClock(totalMs: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-// Owns its own 250ms ticker so the countdown re-renders in isolation — the parent
-// page (and the expensive <Chessboard>) no longer re-render 4x/second. Only the
-// side whose turn it is actually ticks; a stopped clock renders its frozen value.
-function LiveClock({
+// One row of the clock card. Owns its own 250ms ticker so the countdown re-renders in
+// isolation — the parent page (and the expensive <Chessboard>) don't re-render 4x/second.
+// Only the side whose turn it is ticks; a stopped clock renders its frozen value.
+function ClockCardRow({
   side,
-  status,
-  result,
-  turn,
-  serverNow,
-  clockMs,
+  name,
+  colorLabel,
+  thinkingLabel,
+  game,
 }: {
   side: "w" | "b";
-  status: string;
-  result: string | null;
-  turn: "w" | "b";
-  serverNow: string;
-  clockMs: number;
+  name: string;
+  colorLabel: string;
+  thinkingLabel: string;
+  game: GameSummary;
 }) {
-  const isRunning = status === "active" && !result && turn === side;
+  const isRunning = game.status === "active" && !game.result && game.turn === side;
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -105,8 +110,32 @@ function LiveClock({
     return () => window.clearInterval(interval);
   }, [isRunning]);
 
-  const elapsed = isRunning ? Math.max(0, now - new Date(serverNow).getTime()) : 0;
-  return <>{formatClock(Math.max(0, clockMs - elapsed))}</>;
+  const untimed = game.timeControl === "Freestyle";
+  const baseMs = side === "w" ? game.clocks.whiteMs : game.clocks.blackMs;
+  const elapsed = isRunning ? Math.max(0, now - new Date(game.serverNow).getTime()) : 0;
+  const ms = Math.max(0, baseMs - elapsed);
+  const low = !untimed && ms < 20_000;
+
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 transition-colors ${
+        isRunning ? (low ? "bg-red-600 text-white" : "bg-foreground text-background") : "bg-secondary/60"
+      }`}
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{name}</p>
+        <p className={`text-xs ${isRunning ? "opacity-70" : "text-muted-foreground"}`}>
+          {colorLabel}
+          {isRunning ? ` · ${thinkingLabel}` : ""}
+        </p>
+      </div>
+      <span
+        className={`font-mono text-4xl font-bold tabular-nums leading-none ${!isRunning && low ? "text-red-600" : ""}`}
+      >
+        {untimed ? "∞" : formatClock(ms)}
+      </span>
+    </div>
+  );
 }
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -249,6 +278,9 @@ export function FriendGamePage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [moveHint, setMoveHint] = useState("");
+  const [flipped, setFlipped] = useState(false);
+  const [confirmingResign, setConfirmingResign] = useState(false);
+  const [premove, setPremove] = useState<Premove | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idCopyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -282,6 +314,12 @@ export function FriendGamePage() {
     !game?.result &&
     Boolean(localColor) &&
     game?.turn === localColor;
+
+  const canPremove =
+    game?.status === "active" &&
+    !game?.result &&
+    Boolean(localColor) &&
+    game?.turn !== localColor;
 
   const drawOfferForPlayer =
     game?.drawOfferBy && localColor && game.drawOfferBy !== localColor;
@@ -404,6 +442,54 @@ export function FriendGamePage() {
     }, 5000);
     return () => window.clearTimeout(t);
   }, [gameEndModal, navigate]);
+
+  // A queued premove is dropped as soon as the game is no longer live, and Esc cancels it.
+  useEffect(() => {
+    if (premove && (!game || game.status !== "active" || game.result)) {
+      setPremove(null);
+    }
+  }, [premove, game]);
+
+  useEffect(() => {
+    if (!premove) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPremove(null);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [premove]);
+
+  // Fire the premove a beat after the opponent's move lands so their move is still seen.
+  // It is re-validated against the real position; the server validates it again on game:move.
+  useEffect(() => {
+    if (!premove || !canMove || acting || !game) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setPremove(null);
+      try {
+        const chess = new Chess(game.fen);
+        const legal = chess
+          .moves({ square: premove.from as Square, verbose: true })
+          .some((move) => move.to === premove.to);
+        const piece = chess.get(premove.from as Square);
+        if (legal && piece) {
+          void handleMove(premove.from, premove.to, `${piece.color}${piece.type}`);
+          return;
+        }
+      } catch {
+        // Fall through to the cancelled message below.
+      }
+      setMoveHint(t("premove.cancelledIllegal"));
+    }, 180);
+    return () => window.clearTimeout(timer);
+    // handleMove/t intentionally omitted: this must only re-arm when the position or premove changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [premove, canMove, acting, game?.fen]);
 
   useEffect(() => {
     if (!gameId || !token) {
@@ -641,6 +727,45 @@ export function FriendGamePage() {
     return game.isCheck ? t("turn.opponentMoveCheck") : t("turn.opponentMove");
   })();
 
+  const moveSans = useMemo(() => {
+    if (!game?.pgn) {
+      return [] as string[];
+    }
+    try {
+      const chess = new Chess();
+      chess.loadPgn(game.pgn);
+      return chess.history();
+    } catch {
+      return [] as string[];
+    }
+  }, [game?.pgn]);
+  const captures = useMemo(() => getCaptureSummary(game?.fen ?? ""), [game?.fen]);
+
+  const whiteAtBottom = (localColor !== "b") !== flipped;
+  const bottomColor: "w" | "b" = whiteAtBottom ? "w" : "b";
+  const topColor: "w" | "b" = bottomColor === "w" ? "b" : "w";
+  const opponentName = localColor
+    ? ((localColor === "w" ? game?.players.black : game?.players.white)?.username ?? null)
+    : null;
+  const isSeatEmpty = (color: "w" | "b") => !(color === "w" ? game?.players.white : game?.players.black);
+  const playerName = (color: "w" | "b") =>
+    (color === "w" ? game?.players.white : game?.players.black)?.username ?? t("players.waitingPlaceholder");
+  const renderStrip = (color: "w" | "b") => (
+    <PlayerStrip
+      name={playerName(color)}
+      subtitle={playerSubtitle(color)}
+      isYou={color === localColor}
+      isTurn={game?.status === "active" && !game.result && game.turn === color}
+      waiting={isSeatEmpty(color)}
+      captured={captures.capturedBy[color]}
+      lead={captures.lead[color]}
+    />
+  );
+  const playerSubtitle = (color: "w" | "b") =>
+    `${color === "w" ? t("players.white") : t("players.black")} · ${
+      color === localColor ? t("players.you") : (game?.timeControl ?? "")
+    }`;
+
   return (
     <div className="relative">
       <div className="pointer-events-none absolute inset-0 -z-10 opacity-50" aria-hidden>
@@ -651,12 +776,16 @@ export function FriendGamePage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-            <Swords className="h-3.5 w-3.5 text-[#71808F]" aria-hidden />
-            {t("header.badge")}
+            <Swords className="h-3.5 w-3.5 text-accent" aria-hidden />
+            {game
+              ? t("header.badgeWithTime", { badge: t("header.badge"), timeControl: game.timeControl })
+              : t("header.badge")}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("header.title")}</h1>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                {opponentName ? t("header.versus", { name: opponentName }) : t("header.title")}
+              </h1>
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 {t("header.gameId", { id: gameId ?? "" })}
               </p>
@@ -690,102 +819,98 @@ export function FriendGamePage() {
         ) : null}
 
         {game ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-                  <CardContent className="p-4 pt-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t("clocks.white")}
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums">
-                      <LiveClock
-                        side="w"
-                        status={game.status}
-                        result={game.result}
-                        turn={game.turn}
-                        serverNow={game.serverNow}
-                        clockMs={game.clocks.whiteMs}
-                      />
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {game.turn === "w" && game.status === "active" && !game.result ? (
-                        <span className="text-primary">{t("clocks.running")}</span>
-                      ) : (
-                        "—"
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-                  <CardContent className="p-4 pt-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t("clocks.black")}
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums">
-                      <LiveClock
-                        side="b"
-                        status={game.status}
-                        result={game.result}
-                        turn={game.turn}
-                        serverNow={game.serverNow}
-                        clockMs={game.clocks.blackMs}
-                      />
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {game.turn === "b" && game.status === "active" && !game.result ? (
-                        <span className="text-primary">{t("clocks.running")}</span>
-                      ) : (
-                        "—"
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+            <section className="mx-auto grid w-full max-w-[640px] gap-2" aria-label={t("header.title")}>
+              {renderStrip(topColor)}
+              <Card className="overflow-hidden border-border/80 bg-card/80 p-2 backdrop-blur-sm">
+                <div className="board-shell mx-auto w-full">
+                  <Chessboard
+                    options={{
+                      position: game.fen,
+                      boardOrientation: whiteAtBottom ? "white" : "black",
+                      lightSquareStyle,
+                      darkSquareStyle,
+                      ...BOARD_NOTATION_OPTIONS,
+                      // Own pieces stay draggable while the opponent is to move: that drop queues a premove.
+                      allowDragging: (canMove && !acting) || canPremove,
+                      canDragPiece: ({ piece }) => piece.pieceType[0].toLowerCase() === localColor,
+                      squareStyles: premove
+                        ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
+                        : {},
+                      arrows: premove
+                        ? [{ startSquare: premove.from, endSquare: premove.to, color: PREMOVE_ARROW_COLOR }]
+                        : [],
+                      // Clicking the board cancels a queued premove (same as Lichess).
+                      onSquareClick: () => {
+                        if (premove) {
+                          setPremove(null);
+                        }
+                      },
+                      onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
+                        if (!sourceSquare || !targetSquare) {
+                          return false;
+                        }
 
-              <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Users className="h-4 w-4 text-primary" aria-hidden />
-                    {t("players.title")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">{t("players.white")}</span>
-                    <span className="font-medium">
-                      {game.players.white?.username ?? t("players.waitingPlaceholder")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">{t("players.black")}</span>
-                    <span className="font-medium">
-                      {game.players.black?.username ?? t("players.waitingPlaceholder")}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 border-t border-border pt-3 text-muted-foreground">
-                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
-                    <span>{game.timeControl}</span>
-                  </div>
-                  <p className="border-t border-border pt-3 text-sm leading-snug text-foreground">
-                    {statusText}
-                  </p>
-                  {game.result ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("players.resultLabel")}{" "}
-                      <span className="font-medium text-foreground">{formatResult(game.result, t)}</span>
-                    </p>
-                  ) : null}
-                  {game.drawOfferBy ? (
-                    <p className="rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
-                      {t("players.drawOfferPending", {
-                        color: game.drawOfferBy === "w" ? t("players.white") : t("players.black"),
-                      })}
-                    </p>
-                  ) : null}
-                </CardContent>
+                        if (canMove) {
+                          void handleMove(sourceSquare, targetSquare, piece.pieceType);
+                        } else if (
+                          canPremove &&
+                          localColor &&
+                          isPremoveLegal(game.fen, localColor, sourceSquare, targetSquare)
+                        ) {
+                          setPremove({ from: sourceSquare, to: targetSquare });
+                        }
+                        return false;
+                      },
+                    }}
+                  />
+                </div>
               </Card>
+              {renderStrip(bottomColor)}
 
+              {game.status === "active" && !game.result ? (
+                <div className="flex min-h-9 items-center px-1" aria-live="polite">
+                  {premove ? (
+                    <div className="flex w-full items-center gap-2 rounded-lg bg-blue-600/10 px-3 py-1.5 text-sm text-blue-700">
+                      <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="font-semibold">{t("premove.label")}</span>
+                      <span className="font-mono">
+                        {premove.from} → {premove.to}
+                      </span>
+                      <span className="hidden text-xs text-blue-700/70 sm:inline">{t("premove.playsOnMove")}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPremove(null)}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold hover:bg-blue-600/15"
+                        aria-label={t("premove.cancelAria")}
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                        {t("premove.cancel")}
+                      </button>
+                    </div>
+                  ) : canPremove ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      {opponentName
+                        ? t("premove.hint", { name: opponentName })
+                        : t("premove.hintGeneric")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {moveHint ? (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-amber-500/45 bg-amber-950/45 px-4 py-3 text-sm shadow-sm"
+                >
+                  <p className="m-0 font-medium text-amber-200">{t("moveHint.title")}</p>
+                  <p className="mt-2 m-0 leading-relaxed text-amber-100/95">{moveHint}</p>
+                </div>
+              ) : null}
+            </section>
+
+            <aside className="grid gap-4">
               {game.status === "waiting" ? (
                 <Card className="border-primary/25 bg-card/80 backdrop-blur-sm">
                   <CardHeader className="pb-3">
@@ -858,95 +983,142 @@ export function FriendGamePage() {
                     </div>
                   </CardContent>
                 </Card>
-              ) : null}
-            </div>
+              ) : (
+                <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+                  <CardContent className="space-y-2 p-3">
+                    {[topColor, bottomColor].map((color) => (
+                      <ClockCardRow
+                        key={color}
+                        side={color}
+                        name={playerName(color)}
+                        colorLabel={color === "w" ? t("clocks.white") : t("clocks.black")}
+                        thinkingLabel={t("clocks.thinking")}
+                        game={game}
+                      />
+                    ))}
+                    <p className="px-1 pt-1 text-sm leading-snug">{statusText}</p>
+                  </CardContent>
+                </Card>
+              )}
 
-            <div className="space-y-4">
-              <Card className="overflow-hidden border-border/80 bg-card/80 p-4 backdrop-blur-sm">
-                <div className="board-shell mx-auto w-full max-w-[560px]">
-                  <Chessboard
-                    options={{
-                      position: game.fen,
-                      boardOrientation: localColor === "b" ? "black" : "white",
-                      lightSquareStyle,
-                      darkSquareStyle,
-                      allowDragging: canMove && !acting,
-                      onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
-                        if (!sourceSquare || !targetSquare) {
-                          return false;
-                        }
-
-                        void handleMove(sourceSquare, targetSquare, piece.pieceType);
-                        return false;
-                      },
-                    }}
-                  />
-                </div>
-              </Card>
-
-              {moveHint ? (
-                <div
-                  role="alert"
-                  className="rounded-lg border border-amber-500/45 bg-amber-950/45 px-4 py-3 text-sm shadow-sm"
-                >
-                  <p className="m-0 font-medium text-amber-200">{t("moveHint.title")}</p>
-                  <p className="mt-2 m-0 leading-relaxed text-amber-100/95">{moveHint}</p>
+              {drawOfferForPlayer && !game.result ? (
+                <div role="alert" className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    <Handshake className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    {t("actions.drawOfferFrom", { name: opponentName ?? t("endModal.opponentFallback") })}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      disabled={acting}
+                      onClick={() => handleAction("game:draw-response", { accept: false })}
+                    >
+                      {t("actions.declineDraw")}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="accent"
+                      className="flex-1"
+                      disabled={acting}
+                      onClick={() => handleAction("game:draw-response", { accept: true })}
+                    >
+                      {t("actions.acceptDraw")}
+                    </Button>
+                  </div>
                 </div>
               ) : null}
 
               <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Timer className="h-4 w-4 text-muted-foreground" aria-hidden />
-                    {t("actions.title")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
-                    disabled={acting || game.status !== "active" || Boolean(game.result)}
-                    onClick={() => handleAction("game:resign")}
-                  >
-                    {t("actions.resign")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={
-                      acting ||
-                      game.status !== "active" ||
-                      Boolean(game.result) ||
-                      Boolean(game.drawOfferBy)
-                    }
-                    onClick={() => handleAction("game:draw-offer")}
-                  >
-                    {t("actions.offerDraw")}
-                  </Button>
-                  {drawOfferForPlayer ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="accent"
-                        disabled={acting}
-                        onClick={() => handleAction("game:draw-response", { accept: true })}
-                      >
-                        {t("actions.acceptDraw")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={acting}
-                        onClick={() => handleAction("game:draw-response", { accept: false })}
-                      >
-                        {t("actions.declineDraw")}
-                      </Button>
-                    </>
-                  ) : null}
+                <CardContent className="p-4">
+                  <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>{t("moves.title")}</span>
+                    {moveSans.length ? <span>{t("moves.ply", { count: moveSans.length })}</span> : null}
+                  </div>
+                  <MoveList sans={moveSans} emptyLabel={t("moves.empty")} maxHeight="max-h-44" />
                 </CardContent>
               </Card>
-            </div>
+
+              <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+                <CardContent className="space-y-3 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("actions.title")}
+                  </p>
+                  {confirmingResign && !game.result ? (
+                    <div
+                      className="space-y-3 rounded-xl bg-red-50 p-3 text-red-900"
+                      role="alertdialog"
+                      aria-label={t("actions.resign")}
+                    >
+                      <p className="text-sm font-medium">{t("actions.resignPrompt")}</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setConfirmingResign(false)}
+                        >
+                          {t("actions.keepPlaying")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                          disabled={acting}
+                          onClick={() => {
+                            setConfirmingResign(false);
+                            void handleAction("game:resign");
+                          }}
+                        >
+                          {t("actions.confirmResign")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={acting || game.status !== "active" || Boolean(game.result)}
+                        onClick={() => setConfirmingResign(true)}
+                      >
+                        <Flag className="mr-2 h-4 w-4" aria-hidden />
+                        {t("actions.resign")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={
+                          acting ||
+                          game.status !== "active" ||
+                          Boolean(game.result) ||
+                          Boolean(game.drawOfferBy)
+                        }
+                        onClick={() => handleAction("game:draw-offer")}
+                      >
+                        <Handshake className="mr-2 h-4 w-4" aria-hidden />
+                        {game.drawOfferBy && !drawOfferForPlayer ? t("actions.offerSent") : t("actions.offerDraw")}
+                      </Button>
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setFlipped((value) => !value)}
+                  >
+                    <ArrowUpDown className="mr-2 h-4 w-4" aria-hidden />
+                    {t("actions.flip")}
+                  </Button>
+                </CardContent>
+              </Card>
+            </aside>
           </div>
         ) : null}
       </div>

@@ -55,7 +55,8 @@ function delay(ms: number) {
 }
 
 export function LandingPage() {
-  const { t } = useTranslation("landing");
+  const { t, i18n } = useTranslation("landing");
+  const isGeorgian = i18n.language?.startsWith("ka") ?? false;
 
   // Clicking the decorative board triggers a one-shot animated replay of REPLAY_GAME_PGN;
   // runIdRef guards against overlapping runs and stale setState calls after unmount.
@@ -203,9 +204,15 @@ export function LandingPage() {
         <section className="relative z-10 overflow-hidden">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:grid-cols-2 md:gap-16 md:px-8 md:py-24 lg:py-28">
             <div className="max-w-xl">
-              <h1 className="landing-fade-up landing-fade-up-delay-1 mt-6 inline-flex flex-col gap-1 rounded-2xl border border-primary/20 bg-white px-6 py-5 font-display text-3xl font-bold leading-[1.15] tracking-tight text-foreground shadow-soft sm:text-4xl lg:text-[2.75rem]">
-                <span className="whitespace-nowrap">{t("heroTitleLine1")}</span>
-                <span className="whitespace-nowrap">{t("heroTitleLine2")}</span>
+              <h1
+                className={`landing-fade-up landing-fade-up-delay-1 mt-6 font-display font-bold tracking-tight text-foreground [text-wrap:balance] ${
+                  isGeorgian
+                    ? "text-2xl leading-[1.3] sm:text-3xl lg:text-4xl"
+                    : "text-3xl leading-[1.15] sm:text-4xl lg:text-[2.75rem]"
+                }`}
+              >
+                <span className="block">{t("heroTitleLine1")}</span>{" "}
+                <span className="block">{t("heroTitleLine2")}</span>
               </h1>
 
               <p className="landing-fade-up landing-fade-up-delay-2 mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">

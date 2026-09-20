@@ -37,3 +37,14 @@ export function getBoardSquareStyles(themeId: BoardThemeId) {
     darkSquareStyle: { backgroundColor: colors.dark },
   };
 }
+
+/**
+ * Coordinate labels (a-h, 1-8) — bold black so they stay readable on every board theme,
+ * light and dark squares alike (the library default is a pale tan that vanishes on several).
+ */
+export const BOARD_NOTATION_OPTIONS = {
+  lightSquareNotationStyle: { color: "#111111" },
+  darkSquareNotationStyle: { color: "#111111" },
+  alphaNotationStyle: { fontSize: "14px", fontWeight: 800, bottom: 2, right: 5 },
+  numericNotationStyle: { fontSize: "14px", fontWeight: 800, top: 3, left: 4 },
+};
