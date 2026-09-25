@@ -5,11 +5,18 @@ import {
   resolveBoardThemeId,
   type BoardThemeId,
 } from "../lib/boardThemes";
+import {
+  DEFAULT_PIECE_SET,
+  resolvePieceSetId,
+  type PieceSetId,
+} from "../lib/pieceSets";
 
 type PreferencesState = {
   boardTheme: BoardThemeId;
+  pieceSet: PieceSetId;
   setBoardTheme: (theme: BoardThemeId) => void;
-  hydrateFromServer: (prefs: { boardTheme?: unknown }) => void;
+  setPieceSet: (pieceSet: PieceSetId) => void;
+  hydrateFromServer: (prefs: { boardTheme?: unknown; pieceSet?: unknown }) => void;
   clearPreferences: () => void;
 };
 
@@ -17,11 +24,16 @@ export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
       boardTheme: DEFAULT_BOARD_THEME,
+      pieceSet: DEFAULT_PIECE_SET,
       setBoardTheme: (boardTheme) => set({ boardTheme }),
+      setPieceSet: (pieceSet) => set({ pieceSet }),
       hydrateFromServer: (prefs) => {
-        set({ boardTheme: resolveBoardThemeId(prefs.boardTheme) });
+        set({
+          boardTheme: resolveBoardThemeId(prefs.boardTheme),
+          pieceSet: resolvePieceSetId(prefs.pieceSet),
+        });
       },
-      clearPreferences: () => set({ boardTheme: DEFAULT_BOARD_THEME }),
+      clearPreferences: () => set({ boardTheme: DEFAULT_BOARD_THEME, pieceSet: DEFAULT_PIECE_SET }),
     }),
     {
       name: "chesshub-preferences",
@@ -34,6 +46,7 @@ export const usePreferencesStore = create<PreferencesState>()(
           ...current,
           ...stored,
           boardTheme: resolveBoardThemeId(stored.boardTheme),
+          pieceSet: resolvePieceSetId(stored.pieceSet),
         };
       },
     },

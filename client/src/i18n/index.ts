@@ -8,6 +8,7 @@ import enLanding from "../locales/en/landing.json";
 import enAuth from "../locales/en/auth.json";
 import enDashboard from "../locales/en/dashboard.json";
 import enNewGame from "../locales/en/newGame.json";
+import enPlayOnline from "../locales/en/playOnline.json";
 import enAiGame from "../locales/en/aiGame.json";
 import enFriendGame from "../locales/en/friendGame.json";
 import enGameHistory from "../locales/en/gameHistory.json";
@@ -23,6 +24,7 @@ import kaLanding from "../locales/ka/landing.json";
 import kaAuth from "../locales/ka/auth.json";
 import kaDashboard from "../locales/ka/dashboard.json";
 import kaNewGame from "../locales/ka/newGame.json";
+import kaPlayOnline from "../locales/ka/playOnline.json";
 import kaAiGame from "../locales/ka/aiGame.json";
 import kaFriendGame from "../locales/ka/friendGame.json";
 import kaGameHistory from "../locales/ka/gameHistory.json";
@@ -51,6 +53,7 @@ i18n
         auth: enAuth,
         dashboard: enDashboard,
         newGame: enNewGame,
+        playOnline: enPlayOnline,
         aiGame: enAiGame,
         friendGame: enFriendGame,
         gameHistory: enGameHistory,
@@ -67,6 +70,7 @@ i18n
         auth: kaAuth,
         dashboard: kaDashboard,
         newGame: kaNewGame,
+        playOnline: kaPlayOnline,
         aiGame: kaAiGame,
         friendGame: kaFriendGame,
         gameHistory: kaGameHistory,
@@ -86,6 +90,7 @@ i18n
       "auth",
       "dashboard",
       "newGame",
+      "playOnline",
       "aiGame",
       "friendGame",
       "gameHistory",

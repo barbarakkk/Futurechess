@@ -3,6 +3,7 @@ import { Chessboard, ChessboardProvider, SparePiece } from "react-chessboard";
 import type { ChessboardOptions } from "react-chessboard";
 import { Eraser, Grid2x2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { BoardWithCoordinates } from "../components/game/BoardCoordinates";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useBoardTheme } from "../hooks/useBoardTheme";
@@ -30,7 +31,7 @@ function createStartingPosition(): Position {
 
 export function BoardPage() {
   const { t } = useTranslation("board");
-  const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
+  const { lightSquareStyle, darkSquareStyle, pieces } = useBoardTheme();
   const [position, setPosition] = useState<Position>(createStartingPosition);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -38,6 +39,7 @@ export function BoardPage() {
     position,
     lightSquareStyle,
     darkSquareStyle,
+    pieces,
     ...BOARD_NOTATION_OPTIONS,
     allowDrawingArrows: false,
     showAnimations: false,
@@ -108,9 +110,9 @@ export function BoardPage() {
 
       <ChessboardProvider options={options}>
         <Card className="overflow-hidden border-border/80 bg-card/80 p-3 shadow-lg backdrop-blur-sm sm:p-5">
-          <div className="board-shell mx-auto w-full max-w-[680px]">
+          <BoardWithCoordinates orientation="white" className="max-w-[680px]">
             <Chessboard />
-          </div>
+          </BoardWithCoordinates>
         </Card>
         <div className="board-dock mx-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-[28px] border border-white/60 bg-white/70 px-3 py-2 shadow-[0_18px_36px_-20px_rgba(15,70,150,0.32)] backdrop-blur-xl">
           {renderGroup(WHITE_PIECES)}

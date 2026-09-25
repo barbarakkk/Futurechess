@@ -6,12 +6,20 @@ const {
   BOARD_THEME_IDS,
   normalizePreferences,
 } = require("../constants/boardThemes");
+const { PIECE_SET_IDS } = require("../constants/pieceSets");
 
 const router = Router();
 
-const patchPreferencesSchema = z.object({
-  boardTheme: z.enum(BOARD_THEME_IDS),
-});
+// Both fields are optional so a client can update just the board theme or just the piece
+// set in one PATCH without needing to resend the other — at least one must be present.
+const patchPreferencesSchema = z
+  .object({
+    boardTheme: z.enum(BOARD_THEME_IDS).optional(),
+    pieceSet: z.enum(PIECE_SET_IDS).optional(),
+  })
+  .refine((value) => value.boardTheme !== undefined || value.pieceSet !== undefined, {
+    message: "At least one preference field is required",
+  });
 
 router.get("/preferences", requireAuth, async (req, res, next) => {
   try {
@@ -40,9 +48,11 @@ router.patch("/preferences", requireAuth, async (req, res, next) => {
         ? existing.preferences
         : {};
 
+    // Only the field(s) actually present in the request body override `current` — the
+    // schema guarantees an absent field was never sent, not sent-as-undefined.
     const preferences = normalizePreferences({
       ...current,
-      boardTheme: input.boardTheme,
+      ...input,
     });
 
     await prisma.user.update({

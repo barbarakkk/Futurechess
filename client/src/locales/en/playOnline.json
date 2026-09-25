@@ -1,0 +1,20 @@
+{
+  "searching": {
+    "title": "Searching for an opponent…",
+    "subtitle": "Matching you with another player online."
+  },
+  "timeout": {
+    "title": "No opponent found",
+    "subtitle": "Nobody was available to play right now."
+  },
+  "error": {
+    "title": "Couldn't start matchmaking"
+  },
+  "errors": {
+    "joinFailed": "Could not join the matchmaking queue. Please try again.",
+    "connectionFailed": "Lost connection to the server."
+  },
+  "cancel": "Cancel",
+  "tryAgain": "Try again",
+  "backToDashboard": "Back to dashboard"
+}

@@ -13,7 +13,9 @@ import {
   Flame,
   GraduationCap,
   Globe,
+  Handshake,
   Link2,
+  Radar,
   Swords,
   Trophy,
   Wallet,
@@ -550,6 +552,7 @@ export function DashboardPage() {
                 </div>
                 <div className="hidden h-9 w-px bg-border/60 sm:block" aria-hidden />
                 <div className="flex flex-1 flex-wrap gap-2.5">
+                  <StatTile label={t("stats.currentStreak.title")} value={stats.currentStreak} icon={Flame} />
                   <StatTile
                     label={t("stats.winRate.title")}
                     value={`${stats.winRate}%`}
@@ -557,8 +560,7 @@ export function DashboardPage() {
                     tone="text-emerald-600"
                     bar="bg-emerald-500"
                   />
-                  <StatTile label={t("stats.currentStreak.title")} value={stats.currentStreak} icon={Flame} />
-                  <StatTile label={t("stats.draws.title")} value={stats.draws} />
+                  <StatTile label={t("stats.draws.title")} value={stats.draws} icon={Handshake} />
                   <StatTile
                     label={t("stats.lossRate.title")}
                     value={`${stats.lossRate}%`}
@@ -569,6 +571,25 @@ export function DashboardPage() {
                 </div>
               </div>
             )}
+          </Widget>
+
+          <Widget tint="bg-gradient-to-br from-primary/15 to-primary/5">
+            <div className="flex h-full flex-col justify-between">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+                <Radar className="h-[18px] w-[18px] text-primary" aria-hidden />
+              </span>
+              <div>
+                <p className="text-sm font-semibold tracking-[-0.005em]">{t("playOnline.title")}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="dashboard-press mt-2 h-7 w-full text-xs"
+                  onClick={() => navigate("/play-online")}
+                >
+                  {t("playOnline.cta")}
+                </Button>
+              </div>
+            </div>
           </Widget>
 
           <Widget tint="bg-gradient-to-br from-[#71808F]/15 to-[#71808F]/5">

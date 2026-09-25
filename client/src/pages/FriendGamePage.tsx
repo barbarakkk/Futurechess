@@ -27,6 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { BoardWithCoordinates } from "../components/game/BoardCoordinates";
 import { MoveList } from "../components/game/MoveList";
 import { PlayerStrip } from "../components/game/PlayerStrip";
 import { api } from "../lib/api";
@@ -34,6 +35,7 @@ import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
 import { getCaptureSummary } from "../lib/chessCaptures";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
 import { isPremoveLegal, PREMOVE_ARROW_COLOR, PREMOVE_SQUARE_STYLE, type Premove } from "../lib/premove";
+import { buildMoveHintSquareStyles, getPotentialMoveSquares } from "../lib/moveHints";
 import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
 
@@ -269,7 +271,7 @@ export function FriendGamePage() {
   const { gameId } = useParams();
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-  const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
+  const { lightSquareStyle, darkSquareStyle, pieces } = useBoardTheme();
   const [game, setGame] = useState<GameSummary | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -282,6 +284,9 @@ export function FriendGamePage() {
   const [flipped, setFlipped] = useState(false);
   const [confirmingResign, setConfirmingResign] = useState(false);
   const [premove, setPremove] = useState<Premove | null>(null);
+  // Square currently being dragged, so we can show chess.com-style legal-move dots for it —
+  // separate from `moveHint` above, which is unrelated illegal-move explanation text.
+  const [draggingSquare, setDraggingSquare] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idCopyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -324,6 +329,15 @@ export function FriendGamePage() {
 
   const drawOfferForPlayer =
     game?.drawOfferBy && localColor && game.drawOfferBy !== localColor;
+
+  // Legal-move dots for whichever piece is currently being dragged (both a real move and a
+  // queued premove use the same "force the turn" approximation as isPremoveLegal below).
+  const moveHintSquareStyles = useMemo(() => {
+    if (!draggingSquare || !game?.fen) {
+      return {};
+    }
+    return buildMoveHintSquareStyles(getPotentialMoveSquares(game.fen, draggingSquare));
+  }, [draggingSquare, game?.fen]);
 
   const shareLink =
     typeof window !== "undefined" && gameId
@@ -833,20 +847,24 @@ export function FriendGamePage() {
             <section className="mx-auto grid w-full min-w-0 max-w-[640px] grid-cols-1 gap-2" aria-label={t("header.title")}>
               {renderStrip(topColor)}
               <Card className="overflow-hidden border-border/80 bg-card/80 p-2 backdrop-blur-sm">
-                <div className="board-shell mx-auto w-full">
+                <BoardWithCoordinates orientation={whiteAtBottom ? "white" : "black"}>
                   <Chessboard
                     options={{
                       position: game.fen,
                       boardOrientation: whiteAtBottom ? "white" : "black",
                       lightSquareStyle,
                       darkSquareStyle,
+                      pieces,
                       ...BOARD_NOTATION_OPTIONS,
                       // Own pieces stay draggable while the opponent is to move: that drop queues a premove.
                       allowDragging: (canMove && !acting) || canPremove,
                       canDragPiece: ({ piece }) => piece.pieceType[0].toLowerCase() === localColor,
-                      squareStyles: premove
-                        ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
-                        : {},
+                      squareStyles: {
+                        ...moveHintSquareStyles,
+                        ...(premove
+                          ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
+                          : {}),
+                      },
                       arrows: premove
                         ? [{ startSquare: premove.from, endSquare: premove.to, color: PREMOVE_ARROW_COLOR }]
                         : [],
@@ -856,7 +874,16 @@ export function FriendGamePage() {
                           setPremove(null);
                         }
                       },
+                      // Legal-move dots appear the moment a piece is picked up, for both an
+                      // actual move and a queued premove — cleared unconditionally on drop
+                      // below, since react-chessboard always fires onPieceDrop at drag end
+                      // (including drops off the board or on an invalid square).
+                      onPieceDrag: ({ square }) => {
+                        setDraggingSquare(square);
+                      },
                       onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
+                        setDraggingSquare(null);
+
                         if (!sourceSquare || !targetSquare) {
                           return false;
                         }
@@ -874,7 +901,7 @@ export function FriendGamePage() {
                       },
                     }}
                   />
-                </div>
+                </BoardWithCoordinates>
               </Card>
               {renderStrip(bottomColor)}
 

@@ -26,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { BoardWithCoordinates } from "../components/game/BoardCoordinates";
 import { MoveList } from "../components/game/MoveList";
 import { ResumeGameBanners } from "../components/ResumeGameBanners";
 import { PlayerStrip } from "../components/game/PlayerStrip";
@@ -33,6 +34,7 @@ import { api } from "../lib/api";
 import { BOARD_NOTATION_OPTIONS } from "../lib/boardThemes";
 import { getCaptureSummary } from "../lib/chessCaptures";
 import { isPremoveLegal, PREMOVE_ARROW_COLOR, PREMOVE_SQUARE_STYLE, type Premove } from "../lib/premove";
+import { buildMoveHintSquareStyles, getPotentialMoveSquares } from "../lib/moveHints";
 import { getApiErrorMessage, getApiStatusCode } from "../lib/errors";
 import { useBoardTheme } from "../hooks/useBoardTheme";
 import { useAuthStore } from "../store/authStore";
@@ -135,7 +137,7 @@ export function AiGamePage() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const user = useAuthStore((state) => state.user);
-  const { lightSquareStyle, darkSquareStyle } = useBoardTheme();
+  const { lightSquareStyle, darkSquareStyle, pieces } = useBoardTheme();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [userColor, setUserColor] = useState<ColorChoice>("white");
   const [game, setGame] = useState<AiGameState | null>(null);
@@ -150,6 +152,8 @@ export function AiGamePage() {
   const [confirmingResign, setConfirmingResign] = useState(false);
   const [actionNote, setActionNote] = useState("");
   const [premove, setPremove] = useState<Premove | null>(null);
+  // Square currently being dragged, so we can show chess.com-style legal-move dots for it.
+  const [draggingSquare, setDraggingSquare] = useState<string | null>(null);
   const endedBy = useRef<"resign" | "drawAgreed" | null>(null);
 
   const isCreateMode = gameId === "new" || !gameId;
@@ -328,6 +332,15 @@ export function AiGamePage() {
   }
 
   const canPremove = Boolean(game) && !game?.result && !playerTurn;
+
+  // Legal-move dots for whichever piece is currently being dragged (both a real move and a
+  // queued premove use the same "force the turn" approximation as isPremoveLegal).
+  const moveHintSquareStyles = useMemo(() => {
+    if (!draggingSquare || !game?.fen) {
+      return {};
+    }
+    return buildMoveHintSquareStyles(getPotentialMoveSquares(game.fen, draggingSquare));
+  }, [draggingSquare, game?.fen]);
 
   // A queued premove is dropped once the game is over, and Esc cancels it.
   useEffect(() => {
@@ -612,20 +625,24 @@ export function AiGamePage() {
                 lead={captures.lead[topColor]}
               />
               <Card className="overflow-hidden border-border/80 bg-card/80 p-2 backdrop-blur-sm">
-                <div className="board-shell mx-auto w-full">
+                <BoardWithCoordinates orientation={boardOrientation}>
                   <Chessboard
                     options={{
                       position: game.fen,
                       boardOrientation,
                       lightSquareStyle,
                       darkSquareStyle,
+                      pieces,
                       ...BOARD_NOTATION_OPTIONS,
                       // Own pieces stay draggable while Stockfish thinks: that drop queues a premove.
                       allowDragging: (!acting && !game.result && playerTurn) || canPremove,
                       canDragPiece: ({ piece }) => piece.pieceType[0].toLowerCase() === userSide,
-                      squareStyles: premove
-                        ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
-                        : {},
+                      squareStyles: {
+                        ...moveHintSquareStyles,
+                        ...(premove
+                          ? { [premove.from]: PREMOVE_SQUARE_STYLE, [premove.to]: PREMOVE_SQUARE_STYLE }
+                          : {}),
+                      },
                       arrows: premove
                         ? [{ startSquare: premove.from, endSquare: premove.to, color: PREMOVE_ARROW_COLOR }]
                         : [],
@@ -635,7 +652,15 @@ export function AiGamePage() {
                           setPremove(null);
                         }
                       },
+                      // Legal-move dots appear the moment a piece is picked up — cleared
+                      // unconditionally on drop, since react-chessboard always fires
+                      // onPieceDrop at drag end (including off-board / invalid drops).
+                      onPieceDrag: ({ square }) => {
+                        setDraggingSquare(square);
+                      },
                       onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
+                        setDraggingSquare(null);
+
                         if (!sourceSquare || !targetSquare) {
                           return false;
                         }
@@ -649,7 +674,7 @@ export function AiGamePage() {
                       },
                     }}
                   />
-                </div>
+                </BoardWithCoordinates>
               </Card>
               <PlayerStrip
                 name={bottomIsYou ? (user?.username ?? t("play.match.you")) : "Stockfish"}

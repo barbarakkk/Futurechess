@@ -1,7 +1,9 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "playVsFriend": "Play online",
+    "play": "Play",
+    "playOnline": "Play Online",
+    "playVsFriend": "Play with Friends",
     "playVsAi": "Play vs AI",
     "board": "Chess Board",
     "gameHistory": "Game History",

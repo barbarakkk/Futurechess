@@ -1,7 +1,9 @@
 {
   "nav": {
     "dashboard": "დაშბორდი",
-    "playVsFriend": "ონლაინ თამაში",
+    "play": "თამაში",
+    "playOnline": "ონლაინ თამაში",
+    "playVsFriend": "თამაში მეგობრებთან",
     "playVsAi": "თამაში AI-სთან",
     "board": "ჭადრაკის დაფა",
     "gameHistory": "თამაშების ისტორია",

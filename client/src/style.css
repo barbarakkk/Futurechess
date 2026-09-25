@@ -31,6 +31,15 @@ a:hover {
   max-width: 560px;
 }
 
+/* Bundled alternate piece sets (lib/pieceSets.tsx) are raw SVG markup injected via
+   dangerouslySetInnerHTML — the source files carry their own fixed width/height, so this
+   stretches them to fill whatever size react-chessboard renders the piece square at. */
+.piece-figure svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* Chess Board page — piece dock */
 @keyframes board-dock-rise {
   from { opacity: 0; transform: translateY(8px); }

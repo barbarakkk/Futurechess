@@ -17,6 +17,7 @@ import { GameHistoryPage } from "./pages/GameHistoryPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NewGamePage } from "./pages/NewGamePage";
+import { PlayOnlinePage } from "./pages/PlayOnlinePage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -36,6 +37,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/play-online" element={<PlayOnlinePage />} />
             <Route path="/new-game" element={<NewGamePage />} />
             <Route path="/game/:gameId" element={<FriendGamePage />} />
             <Route path="/ai-game/:gameId" element={<AiGamePage />} />

@@ -39,12 +39,10 @@ export function getBoardSquareStyles(themeId: BoardThemeId) {
 }
 
 /**
- * Coordinate labels (a-h, 1-8) — bold black so they stay readable on every board theme,
- * light and dark squares alike (the library default is a pale tan that vanishes on several).
+ * Coordinate labels (a-h, 1-8) are rendered outside the board in the margin (see
+ * components/game/BoardCoordinates.tsx) rather than faintly inside the corner of each edge
+ * square, so this just turns the library's own in-square notation off to avoid a duplicate.
  */
 export const BOARD_NOTATION_OPTIONS = {
-  lightSquareNotationStyle: { color: "#111111" },
-  darkSquareNotationStyle: { color: "#111111" },
-  alphaNotationStyle: { fontSize: "14px", fontWeight: 800, bottom: 2, right: 5 },
-  numericNotationStyle: { fontSize: "14px", fontWeight: 800, top: 3, left: 4 },
+  showNotation: false,
 };

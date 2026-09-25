@@ -9,6 +9,7 @@ const {
   resignGame,
   submitMove,
 } = require("./gameRuntime");
+const { joinQueue, leaveQueue } = require("./matchmakingQueue");
 
 let io;
 
@@ -118,6 +119,26 @@ function attachSocketHandlers(server) {
       } catch (error) {
         ack?.({ ok: false, message: error.message || "Could not update draw offer" });
       }
+    });
+
+    // "Play Online" matchmaking — pairs two searching sockets and hands them off to the
+    // same realtime game flow as friend games (`game:join` etc. above). See matchmakingQueue.js.
+    socket.on("matchmaking:join", async (_payload, ack) => {
+      try {
+        await joinQueue(socket);
+        ack?.({ ok: true });
+      } catch (error) {
+        ack?.({ ok: false, message: error.message || "Could not join matchmaking queue" });
+      }
+    });
+
+    socket.on("matchmaking:cancel", (_payload, ack) => {
+      leaveQueue(socket);
+      ack?.({ ok: true });
+    });
+
+    socket.on("disconnect", () => {
+      leaveQueue(socket);
     });
   });
 

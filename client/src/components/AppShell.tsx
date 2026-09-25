@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   Cpu,
   Grid2x2,
   Crown,
+  Gamepad2,
   GraduationCap,
   History,
   LayoutDashboard,
   LogOut,
   Menu,
   PartyPopper,
+  Radar,
   Settings,
   Sparkles,
   Swords,
 } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -32,6 +35,7 @@ export function AppShell() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const clearPreferences = usePreferencesStore((state) => state.clearPreferences);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // The JWT/user in the store is only as fresh as the last login — a coach application
   // getting approved happens out-of-band (the site owner clicks a link in an email), so the
@@ -67,10 +71,30 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const navItems = [
-    { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+  // "Play" is a collapsible group in the sidebar rather than three separate top-level
+  // links — these three routes are its contents.
+  const playSubItems = [
+    { to: "/play-online", label: t("nav.playOnline"), icon: Radar },
     { to: "/new-game", label: t("nav.playVsFriend"), icon: Swords },
     { to: "/ai-game/new", label: t("nav.playVsAi"), icon: Cpu },
+  ];
+  const isPlayGroupActive = playSubItems.some((item) => item.to === location.pathname);
+  const [playMenuOpen, setPlayMenuOpen] = useState(isPlayGroupActive);
+
+  // Auto-expand the group when navigation (e.g. a dashboard shortcut) lands on one of
+  // its routes directly, so the sidebar doesn't show the current page as collapsed away.
+  useEffect(() => {
+    if (isPlayGroupActive) {
+      setPlayMenuOpen(true);
+    }
+    // Only react to route changes — otherwise this would fight the user re-collapsing
+    // the group by hand while already on one of its pages.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const topNavItems = [{ to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard }];
+
+  const restNavItems = [
     { to: "/board", label: t("nav.board"), icon: Grid2x2 },
     { to: "/game-history", label: t("nav.gameHistory"), icon: History },
     { to: "/coaches", label: t("nav.coaches"), icon: GraduationCap },
@@ -139,7 +163,79 @@ export function AppShell() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-          {navItems.map((item) => (
+          {topNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )
+              }
+              onClick={() => setOpen(false)}
+            >
+              <item.icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              {item.label}
+            </NavLink>
+          ))}
+
+          <div>
+            <button
+              type="button"
+              aria-expanded={playMenuOpen}
+              aria-controls="play-submenu"
+              onClick={() => setPlayMenuOpen((prev) => !prev)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                isPlayGroupActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              )}
+            >
+              <Gamepad2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              <span className="flex-1 text-left">{t("nav.play")}</span>
+              <ChevronDown
+                className={cn("h-4 w-4 shrink-0 opacity-70 transition-transform", playMenuOpen ? "rotate-180" : "")}
+                aria-hidden
+              />
+            </button>
+
+            <div
+              id="play-submenu"
+              className={cn(
+                "grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out",
+                playMenuOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+              )}
+            >
+              <div className="min-h-0">
+                <div className="ml-3 mt-1 flex flex-col gap-1 border-l border-border pl-3">
+                  {playSubItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                        )
+                      }
+                      onClick={() => setOpen(false)}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {restNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

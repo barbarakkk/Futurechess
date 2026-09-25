@@ -18,5 +18,15 @@
       "grey": "Grey",
       "red": "Red & white"
     }
+  },
+  "pieceSet": {
+    "title": "Piece design",
+    "description": "Choose the piece style shown on chess boards during games. This applies to all your games.",
+    "saveError": "Could not save piece design. Please try again.",
+    "sets": {
+      "classic": "Classic",
+      "merida": "Merida",
+      "shapes": "Shapes"
+    }
   }
 }

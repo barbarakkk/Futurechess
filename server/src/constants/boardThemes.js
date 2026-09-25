@@ -1,3 +1,5 @@
+const { resolvePieceSetId } = require("./pieceSets");
+
 const DEFAULT_BOARD_THEME = "blue";
 
 const BOARD_THEME_IDS = ["blue", "green", "wood", "purple", "grey", "red"];
@@ -15,7 +17,10 @@ function resolveBoardThemeId(value) {
 
 function normalizePreferences(raw) {
   const prefs = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-  return { boardTheme: resolveBoardThemeId(prefs.boardTheme) };
+  return {
+    boardTheme: resolveBoardThemeId(prefs.boardTheme),
+    pieceSet: resolvePieceSetId(prefs.pieceSet),
+  };
 }
 
 module.exports = {

@@ -67,8 +67,13 @@
     "ariaLabel": "Notifications",
     "ariaLabelUnread": "Notifications ({{count}} unread)"
   },
+  "playOnline": {
+    "title": "Play Online",
+    "description": "Get matched with another online player at 10+0.",
+    "cta": "Find opponent"
+  },
   "playVsFriend": {
-    "title": "Play online",
+    "title": "Play with Friends",
     "description": "Realtime clocks, invite links, and server-validated moves.",
     "timeControls": {
       "bullet": "Bullet",
