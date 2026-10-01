@@ -66,7 +66,7 @@ export function NewGamePage() {
 
       <section className="mx-auto max-w-2xl space-y-8">
         {inviteExpired ? (
-          <p className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-sm font-medium text-amber-900" role="status">
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-sm font-medium text-amber-900 dark:text-amber-200" role="status">
             {t("inviteExpired")}
           </p>
         ) : null}

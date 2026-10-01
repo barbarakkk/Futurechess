@@ -8,9 +8,9 @@
   },
   "ai": {
     "title": "AI game in progress",
-    "subtitle": "vs Stockfish ({{difficulty}}) · {{count}} moves played",
+    "subtitle": "vs Computer ({{difficulty}}) · {{count}} moves played",
     "yourMove": "Your move",
-    "engineMove": "Stockfish is to move"
+    "engineMove": "The computer is to move"
   },
   "cta": "Resume game",
   "ctaWaiting": "Open game",

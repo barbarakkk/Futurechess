@@ -64,14 +64,14 @@ function OutcomeBadge({ outcome }: { outcome: HistoryOutcome }) {
   const { t } = useTranslation("gameHistory");
   if (outcome === "win") {
     return (
-      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25">
         {t("outcome.win")}
       </Badge>
     );
   }
   if (outcome === "loss") {
     return (
-      <Badge className="bg-red-100 text-red-700 hover:bg-red-200">
+      <Badge className="bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">
         {t("outcome.loss")}
       </Badge>
     );
@@ -342,7 +342,7 @@ export function GameHistoryPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 gap-1 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+                            className="h-8 gap-1 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10 dark:hover:text-red-300 disabled:opacity-40"
                             disabled={
                               deletingId === g.id ||
                               g.outcome === "ongoing"
@@ -375,7 +375,7 @@ export function GameHistoryPage() {
 
       {pendingDelete ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[hsl(var(--overlay))]/30 p-4 backdrop-blur-sm"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget && !deletingId) {
@@ -393,7 +393,7 @@ export function GameHistoryPage() {
           >
             <CardHeader className="space-y-3">
               <div className="flex justify-center sm:justify-start">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10">
                   <AlertTriangle className="h-6 w-6" aria-hidden />
                 </span>
               </div>

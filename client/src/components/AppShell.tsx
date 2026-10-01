@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "../lib/utils";
 import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -118,7 +119,7 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {showCoachWelcome ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-900/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--overlay))]/40 p-4 backdrop-blur-sm">
           <Card className="w-full max-w-sm border-border/80 bg-card shadow-soft" role="alertdialog" aria-modal="true">
             <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -143,7 +144,7 @@ export function AppShell() {
         <button
           type="button"
           aria-label={t("closeNavigation")}
-          className="fixed inset-0 z-30 bg-blue-900/25 backdrop-blur-[1px] md:hidden"
+          className="fixed inset-0 z-30 bg-[hsl(var(--overlay))]/25 backdrop-blur-[1px] md:hidden"
           onClick={() => setOpen(false)}
         />
       ) : null}
@@ -256,9 +257,10 @@ export function AppShell() {
         </nav>
 
         <div className="border-t border-border p-3">
-          <p className="mb-2 truncate px-1 text-xs text-muted-foreground">
-            {user?.username ?? t("playerFallback")}
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+            <p className="truncate text-xs text-muted-foreground">{user?.username ?? t("playerFallback")}</p>
+            <ThemeToggle className="h-8 w-8" />
+          </div>
           <LanguageSwitcher className="mb-2" />
           <Button
             type="button"
@@ -290,6 +292,7 @@ export function AppShell() {
             <Crown className="h-5 w-5 text-[#D4AF37]" aria-hidden />
             FutureChess
           </span>
+          <ThemeToggle className="ml-auto" />
         </header>
 
         <main

@@ -8,17 +8,53 @@
   box-sizing: border-box;
 }
 
+/* Theme palette — HSL channels consumed by tailwind.config.cjs. `.dark` is toggled on <html>
+   by store/themeStore.ts (and pre-applied in index.html to avoid a flash). */
+:root {
+  color-scheme: light;
+  --background: 214 100% 97%;
+  --foreground: 222 47% 20%;
+  --card: 0 0% 100%;
+  --border: 214 32% 88%;
+  --primary: 211 100% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 100% 94%;
+  --muted: 214 60% 92%;
+  --muted-foreground: 215 25% 45%;
+  --accent: 199 89% 48%;
+  --surface-soft: 210 25% 97%;
+  --link: 211 100% 50%;
+  --overlay: 222 60% 25%;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 222 30% 9%;
+  --foreground: 214 30% 92%;
+  --card: 222 26% 13%;
+  --border: 220 18% 24%;
+  --primary: 211 100% 62%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 222 24% 19%;
+  --muted: 222 22% 17%;
+  --muted-foreground: 215 16% 66%;
+  --accent: 199 89% 55%;
+  --surface-soft: 222 26% 11%;
+  --link: 211 100% 68%;
+  --overlay: 222 60% 3%;
+}
+
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: hsl(214 100% 97%);
-  color: hsl(222 47% 20%);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: hsl(211 100% 50%);
+  color: hsl(var(--link));
 }
 
 a:hover {
@@ -90,15 +126,15 @@ a:hover {
 .landing-page__cta-band {
   background: linear-gradient(
     135deg,
-    hsl(214 100% 97%) 0%,
-    hsl(214 100% 94%) 50%,
-    hsl(214 100% 97%) 100%
+    hsl(var(--background)) 0%,
+    hsl(var(--secondary)) 50%,
+    hsl(var(--background)) 100%
   );
 }
 
 .landing-page__board-frame {
   animation: landing-board-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
-  background: linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%);
+  background: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
 }
 
 .landing-page__board {
@@ -118,7 +154,7 @@ a:hover {
   padding: 1rem 1.25rem;
   border-radius: 1rem;
   border: 1px solid hsl(211 100% 50% / 0.18);
-  background: #ffffff;
+  background: hsl(var(--card));
   box-shadow:
     0 12px 28px -10px hsl(211 100% 50% / 0.22),
     0 1px 2px rgba(15, 23, 42, 0.04);
@@ -133,7 +169,7 @@ a:hover {
   left: 50%;
   width: 12px;
   height: 12px;
-  background: #ffffff;
+  background: hsl(var(--card));
   border-left: 1px solid hsl(211 100% 50% / 0.18);
   border-top: 1px solid hsl(211 100% 50% / 0.18);
   transform: translateX(-50%) rotate(45deg);
@@ -152,20 +188,20 @@ a:hover {
   font-family: var(--font-display);
   font-size: 0.95rem;
   font-weight: 700;
-  color: hsl(222 47% 20%);
+  color: hsl(var(--foreground));
 }
 
 .landing-page__replay-popup-subtitle {
   margin: 0.3rem 0 0;
   font-size: 0.78rem;
-  color: hsl(215 25% 45%);
+  color: hsl(var(--muted-foreground));
 }
 
 .landing-page__replay-popup-quote {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
   font-style: italic;
-  color: hsl(211 100% 50%);
+  color: hsl(var(--link));
 }
 
 @keyframes landing-replay-popup-in {
@@ -249,7 +285,7 @@ a:hover {
 }
 
 .dashboard-glass {
-  background: rgba(255, 255, 255, 0.68);
+  background: hsl(var(--card) / 0.68);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -314,4 +350,43 @@ a:hover {
   to {
     opacity: 1;
   }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-enter {
+  animation: panel-enter 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-enter {
+    animation: none;
+  }
+}
+
+/* Dark-mode tweaks for the glass surfaces, whose highlights/shadows are hardcoded white/blue. */
+.dark .dashboard-glass {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 16px 32px -20px rgba(0, 0, 0, 0.6);
+}
+.dark .dashboard-lift:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 22px 40px -18px rgba(0, 0, 0, 0.7);
+}
+.dark .landing-page__blobs {
+  opacity: 0.7;
 }

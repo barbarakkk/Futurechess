@@ -70,7 +70,13 @@
     "saveCount_one": "Save {{count}} day",
     "saveCount_other": "Save {{count}} days",
     "saving": "Saving...",
-    "saved": "Availability saved!"
+    "saved": "Availability saved!",
+    "hoursTitle": "Hours for selected days",
+    "hoursHint": "Days you pick use these hours. Change them and press Apply to update every selected day at once.",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "applyToAll_one": "Apply to {{count}} day",
+    "applyToAll_other": "Apply to all {{count}} days"
   },
   "bookings": {
     "title": "Booking requests",

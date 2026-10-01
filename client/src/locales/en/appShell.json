@@ -21,5 +21,9 @@
     "body": "Your coach application has been approved. Head to your Coach Dashboard to fill in your availability and start accepting bookings.",
     "cta": "Go to Coach Dashboard",
     "dismiss": "Not now"
+  },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
   }
 }

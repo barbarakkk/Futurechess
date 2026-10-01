@@ -89,7 +89,8 @@ export function getPieceRenderObject(setId: PieceSetId): PieceRenderObject | und
   return PIECE_RENDER_OBJECTS[setId];
 }
 
-/** A single piece (white knight) from a given set, for a small settings-page preview swatch. */
-export function getPieceSetPreviewPiece(setId: PieceSetId) {
-  return (PIECE_RENDER_OBJECTS[setId] ?? defaultPieces).wN;
+/** King, queen and both knights of a set — enough to tell sets apart at a glance in the settings page. */
+export function getPieceSetTrio(setId: PieceSetId) {
+  const set = PIECE_RENDER_OBJECTS[setId] ?? defaultPieces;
+  return [set.wK, set.wQ, set.wN, set.bN];
 }

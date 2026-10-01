@@ -8,5 +8,24 @@
     "hint": "Drag a piece onto the board, or click a piece and then a square. Drag a piece off the board to remove it.",
     "white": "White",
     "black": "Black"
+  },
+  "play": {
+    "title": "Play against the computer",
+    "description": "Set up any position on the board, pick your side, and the computer plays it out with you. You move first.",
+    "playAs": "Play as",
+    "difficulty": "Level",
+    "button": "Play from this position",
+    "starting": "Starting...",
+    "levels": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "errors": {
+      "invalid": "This position isn't valid. Each side needs exactly one king, and pawns can't be on the first or last rank.",
+      "check": "This position is illegal: the side that isn't to move is in check.",
+      "over": "This position is already checkmate or a draw.",
+      "generic": "Could not start the game."
+    }
   }
 }

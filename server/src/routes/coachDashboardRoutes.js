@@ -101,8 +101,8 @@ router.put("/profile", async (req, res, next) => {
   }
 });
 
-// Default UTC time window applied to every date the coach toggles on in the calendar UI —
-// this UI only picks whole days, not per-day hours (see CoachDashboardPage's month calendar).
+// Fallback UTC window for the legacy `dates` form of PUT /availability-exceptions. The calendar
+// UI now sends per-date hours (see CoachDashboardPage's bulk "hours for selected days" control).
 const DEFAULT_ONE_OFF_START_MINUTE = 600; // 10:00
 const DEFAULT_ONE_OFF_END_MINUTE = 1080; // 18:00
 
@@ -129,46 +129,93 @@ router.get("/availability-exceptions", async (req, res, next) => {
 });
 
 const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
-const putExceptionsSchema = z.object({ dates: z.array(dateOnlySchema).max(120) });
+const exceptionEntrySchema = z
+  .object({
+    date: dateOnlySchema,
+    startMinute: z.number().int().min(0).max(1439),
+    endMinute: z.number().int().min(1).max(1440),
+  })
+  .refine((entry) => entry.endMinute > entry.startMinute, {
+    message: "endMinute must be after startMinute",
+  });
+// `exceptions` carries per-date hours (bulk-applied from the calendar UI); bare `dates` is the
+// older whole-day form and gets the default window.
+const putExceptionsSchema = z
+  .object({
+    exceptions: z.array(exceptionEntrySchema).max(120).optional(),
+    dates: z.array(dateOnlySchema).max(120).optional(),
+  })
+  .refine((body) => body.exceptions || body.dates, { message: "Expected exceptions or dates" });
 
-/** Replaces the coach's full set of available dates, then additively generates the matching
- * future slots. */
+/** Replaces the coach's full set of available dates (each with its own hours), then additively
+ * generates the matching future slots. */
 router.put("/availability-exceptions", async (req, res, next) => {
   try {
-    const { dates } = putExceptionsSchema.parse(req.body);
+    const body = putExceptionsSchema.parse(req.body);
+    const entries =
+      body.exceptions ??
+      body.dates.map((date) => ({
+        date,
+        startMinute: DEFAULT_ONE_OFF_START_MINUTE,
+        endMinute: DEFAULT_ONE_OFF_END_MINUTE,
+      }));
 
     const now = new Date();
     const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-    const parsedDates = dates.map((raw) => {
-      const parsed = new Date(`${raw}T00:00:00.000Z`);
+    const parsedEntries = entries.map((entry) => {
+      const parsed = new Date(`${entry.date}T00:00:00.000Z`);
       if (Number.isNaN(parsed.getTime())) {
-        throw createHttpError(400, `Invalid date: ${raw}`);
+        throw createHttpError(400, `Invalid date: ${entry.date}`);
       }
       if (parsed < startOfToday) {
-        throw createHttpError(400, `Date is in the past: ${raw}`);
+        throw createHttpError(400, `Date is in the past: ${entry.date}`);
       }
-      return parsed;
+      return { date: parsed, startMinute: entry.startMinute, endMinute: entry.endMinute };
+    });
+    const parsedDates = parsedEntries.map((entry) => entry.date);
+
+    const previous = await prisma.coachAvailabilityException.findMany({
+      where: { coachId: req.coach.id, type: "one_off", date: { in: parsedDates } },
+      select: { date: true, startMinute: true, endMinute: true },
+    });
+    const previousByDate = new Map(previous.map((row) => [row.date.toISOString(), row]));
+    const changedEntries = parsedEntries.filter((entry) => {
+      const before = previousByDate.get(entry.date.toISOString());
+      return before && (before.startMinute !== entry.startMinute || before.endMinute !== entry.endMinute);
     });
 
     await prisma.$transaction([
       prisma.coachAvailabilityException.deleteMany({
         where: { coachId: req.coach.id, type: "one_off", date: { notIn: parsedDates } },
       }),
-      ...parsedDates.map((date) =>
-        prisma.coachAvailabilityException.upsert({
-          where: { coachId_date: { coachId: req.coach.id, date } },
-          update: {
-            type: "one_off",
-            startMinute: DEFAULT_ONE_OFF_START_MINUTE,
-            endMinute: DEFAULT_ONE_OFF_END_MINUTE,
+      // Slot generation is additive, so when a date's hours change the old slots would linger.
+      // Clear only the future slots on those dates that nobody has ever requested — a slot with
+      // any booking (even a declined one) is kept, since its history hangs off it.
+      ...changedEntries.map((entry) =>
+        prisma.coachAvailability.deleteMany({
+          where: {
+            coachId: req.coach.id,
+            isBooked: false,
+            bookings: { none: {} },
+            startTime: {
+              gt: now,
+              gte: entry.date,
+              lt: new Date(entry.date.getTime() + 24 * 60 * 60_000),
+            },
           },
+        }),
+      ),
+      ...parsedEntries.map((entry) =>
+        prisma.coachAvailabilityException.upsert({
+          where: { coachId_date: { coachId: req.coach.id, date: entry.date } },
+          update: { type: "one_off", startMinute: entry.startMinute, endMinute: entry.endMinute },
           create: {
             coachId: req.coach.id,
-            date,
+            date: entry.date,
             type: "one_off",
-            startMinute: DEFAULT_ONE_OFF_START_MINUTE,
-            endMinute: DEFAULT_ONE_OFF_END_MINUTE,
+            startMinute: entry.startMinute,
+            endMinute: entry.endMinute,
           },
         }),
       ),
@@ -179,10 +226,18 @@ router.put("/availability-exceptions", async (req, res, next) => {
     const saved = await prisma.coachAvailabilityException.findMany({
       where: { coachId: req.coach.id, type: "one_off" },
       orderBy: { date: "asc" },
-      select: { date: true },
+      select: { date: true, startMinute: true, endMinute: true },
     });
 
-    res.json({ dates: saved.map((exception) => exception.date.toISOString().slice(0, 10)), slotsCreated: created });
+    res.json({
+      dates: saved.map((exception) => exception.date.toISOString().slice(0, 10)),
+      exceptions: saved.map((exception) => ({
+        date: exception.date.toISOString().slice(0, 10),
+        startMinute: exception.startMinute,
+        endMinute: exception.endMinute,
+      })),
+      slotsCreated: created,
+    });
   } catch (error) {
     next(error);
   }

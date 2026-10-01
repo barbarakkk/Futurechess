@@ -908,13 +908,13 @@ export function FriendGamePage() {
               {game.status === "active" && !game.result ? (
                 <div className="flex min-h-9 items-center px-1" aria-live="polite">
                   {premove ? (
-                    <div className="flex w-full items-center gap-2 rounded-lg bg-blue-600/10 px-3 py-1.5 text-sm text-blue-700">
+                    <div className="flex w-full items-center gap-2 rounded-lg bg-blue-600/10 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300">
                       <Zap className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="font-semibold">{t("premove.label")}</span>
                       <span className="font-mono">
                         {premove.from} → {premove.to}
                       </span>
-                      <span className="hidden text-xs text-blue-700/70 sm:inline">{t("premove.playsOnMove")}</span>
+                      <span className="hidden text-xs text-blue-700/70 dark:text-blue-300/70 sm:inline">{t("premove.playsOnMove")}</span>
                       <button
                         type="button"
                         onClick={() => setPremove(null)}
@@ -1101,7 +1101,7 @@ export function FriendGamePage() {
                   </p>
                   {confirmingResign && !game.result ? (
                     <div
-                      className="space-y-3 rounded-xl bg-red-50 p-3 text-red-900"
+                      className="space-y-3 rounded-xl bg-red-50 p-3 text-red-900 dark:bg-red-950/40 dark:text-red-200"
                       role="alertdialog"
                       aria-label={t("actions.resign")}
                     >
@@ -1177,7 +1177,7 @@ export function FriendGamePage() {
 
       {gameEndModal ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[hsl(var(--overlay))]/30 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="game-end-title"

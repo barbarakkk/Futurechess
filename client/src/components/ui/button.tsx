@@ -12,7 +12,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-secondary hover:text-foreground",
         accent: "bg-accent text-accent-foreground hover:opacity-90",
         outline: "border border-border bg-card hover:bg-secondary",
-        danger: "border border-red-300 bg-card text-red-600 hover:bg-red-50",
+        danger: "border border-red-300 bg-card text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10",
         destructive: "bg-red-600 text-white hover:bg-red-700",
       },
       size: {

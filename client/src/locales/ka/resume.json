@@ -8,9 +8,9 @@
   },
   "ai": {
     "title": "მიმდინარე თამაში AI-სთან",
-    "subtitle": "Stockfish-ის წინააღმდეგ ({{difficulty}}) · {{count}} სვლა",
+    "subtitle": "კომპიუტერის წინააღმდეგ ({{difficulty}}) · {{count}} სვლა",
     "yourMove": "შენი სვლაა",
-    "engineMove": "Stockfish დადის"
+    "engineMove": "კომპიუტერი დადის"
   },
   "cta": "თამაშის გაგრძელება",
   "ctaWaiting": "თამაშის გახსნა",

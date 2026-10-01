@@ -2,10 +2,10 @@
   "setup": {
     "badge": "AI opponent",
     "title": "New AI game",
-    "subtitle": "Tune Stockfish strength and pick your side — one click to open the board.",
+    "subtitle": "Tune the computer's strength and pick your side — one click to open the board.",
     "difficulty": {
       "title": "Difficulty",
-      "description": "Select how aggressively Stockfish will search.",
+      "description": "Select how aggressively the computer will search.",
       "easy": {
         "label": "Easy",
         "hint": "Perfect for beginners"
@@ -21,7 +21,7 @@
     },
     "color": {
       "title": "Your color",
-      "description": "White moves first; as Black, Stockfish opens.",
+      "description": "White moves first; as Black, the computer opens.",
       "white": {
         "label": "White",
         "hint": "Play first"
@@ -41,7 +41,7 @@
   },
   "play": {
     "badge": "AI game",
-    "title": "vs Stockfish",
+    "title": "vs Computer",
     "gameId": "Game ID: {{id}}",
     "loading": "Loading AI game...",
     "notFoundError": "This AI game link is invalid or expired.",
@@ -52,13 +52,14 @@
       "description": "Engine-backed — moves sync when you release a piece.",
       "you": "You",
       "opponent": "Opponent",
-      "opponentName": "Stockfish ({{difficulty}})",
+      "opponentName": "Computer ({{difficulty}})",
       "result": "Result:",
       "yourTurn": "Your move.",
-      "aiTurn": "Stockfish is to move.",
+      "aiTurn": "The computer is to move.",
       "finished": "Game finished: {{result}}",
-      "aiPlayed": "Stockfish played {{san}}",
-      "noAiReply": "No AI reply move."
+      "aiPlayed": "The computer played {{san}}",
+      "noAiReply": "No AI reply move.",
+      "computer": "Computer"
     },
     "results": {
       "white": "White won",
@@ -72,7 +73,7 @@
     "yourTurnHint": "Drag a piece to a highlighted square.",
     "inCheckHint": "You are in check — protect your king.",
     "aiTurnHint": "Replies usually take a moment.",
-    "thinking": "Stockfish is thinking",
+    "thinking": "The computer is thinking",
     "moves": {
       "title": "Moves",
       "empty": "No moves yet. Make the first move.",
@@ -82,17 +83,17 @@
       "title": "Game",
       "resign": "Resign",
       "offerDraw": "Offer draw",
-      "resignPrompt": "Resign this game? Stockfish wins and it counts as a loss.",
+      "resignPrompt": "Resign this game? The computer wins and it counts as a loss.",
       "keepPlaying": "Keep playing",
       "confirmResign": "Yes, resign",
-      "drawDeclined": "Stockfish declined the draw offer.",
+      "drawDeclined": "The computer declined the draw offer.",
       "resignError": "Could not resign the game.",
       "drawError": "Could not send the draw offer."
     },
     "premove": {
       "label": "Premove",
-      "hint": "Stockfish is thinking — drag one of your pieces to queue a premove.",
-      "playsOnReply": "plays as soon as Stockfish replies",
+      "hint": "The computer is thinking — drag one of your pieces to queue a premove.",
+      "playsOnReply": "plays as soon as the computer replies",
       "cancel": "Cancel",
       "cancelAria": "Cancel premove",
       "cancelledIllegal": "Premove cancelled — it is no longer legal."
@@ -105,23 +106,23 @@
     },
     "win": {
       "title": "You won!",
-      "checkmate": "Checkmate — you beat Stockfish!",
+      "checkmate": "Checkmate — you beat the computer!",
       "generic": "The game is over in your favor."
     },
     "loss": {
       "title": "You lost",
-      "checkmate": "Stockfish checkmated you.",
-      "generic": "Stockfish won this game."
+      "checkmate": "The computer checkmated you.",
+      "generic": "The computer won this game."
     },
     "returning": "Returning to your dashboard in 5 seconds…",
     "backToDashboard": "Back to dashboard",
     "resign": {
       "title": "You resigned",
-      "body": "Stockfish wins by resignation."
+      "body": "The computer wins by resignation."
     },
     "drawAgreed": {
       "title": "Draw agreed",
-      "body": "Stockfish accepted your draw offer."
+      "body": "The computer accepted your draw offer."
     }
   }
 }

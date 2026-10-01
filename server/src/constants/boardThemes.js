@@ -2,7 +2,7 @@ const { resolvePieceSetId } = require("./pieceSets");
 
 const DEFAULT_BOARD_THEME = "blue";
 
-const BOARD_THEME_IDS = ["blue", "green", "wood", "purple", "grey", "red"];
+const BOARD_THEME_IDS = ["blue", "green", "wood", "mono", "grey", "red"];
 
 function isBoardThemeId(value) {
   return typeof value === "string" && BOARD_THEME_IDS.includes(value);

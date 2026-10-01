@@ -12,6 +12,7 @@ import {
   Swords,
 } from "lucide-react";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { getBoardSquareStyles } from "../lib/boardThemes";
 
 const LANDING_BOARD_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -171,7 +172,7 @@ export function LandingPage() {
     <div className="landing-page relative min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="landing-page__blobs pointer-events-none absolute inset-0" aria-hidden />
 
-      <header className="relative z-20 border-b border-border/60 bg-white/80 backdrop-blur-md">
+      <header className="relative z-20 border-b border-border/60 bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4 md:px-8">
           <Link to="/" className="flex items-center gap-2.5 no-underline hover:no-underline">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
@@ -184,6 +185,7 @@ export function LandingPage() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSwitcher className="hidden py-1.5 sm:flex" />
+            <ThemeToggle />
             <Link
               to="/login"
               className="hidden px-3 py-2 text-sm font-medium text-muted-foreground no-underline transition hover:text-foreground sm:inline"
@@ -229,7 +231,7 @@ export function LandingPage() {
                 </Link>
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center rounded-xl border border-border bg-white px-6 py-3.5 text-sm font-semibold text-foreground no-underline transition hover:bg-secondary"
+                  className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-6 py-3.5 text-sm font-semibold text-foreground no-underline transition hover:bg-secondary"
                 >
                   {t("haveAccount")}
                 </Link>
@@ -242,10 +244,10 @@ export function LandingPage() {
                   <Chessboard options={landingBoardOptions} />
                 </div>
 
-                <div className="absolute -right-3 -top-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-white shadow-soft">
+                <div className="absolute -right-3 -top-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-soft">
                   <Crown className="h-6 w-6 text-[#D4AF37]" aria-hidden />
                 </div>
-                <div className="absolute -bottom-3 -left-3 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-primary shadow-soft">
+                <div className="absolute -bottom-3 -left-3 rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary shadow-soft">
                   FutureChess
                 </div>
               </div>
@@ -277,13 +279,13 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="relative z-10 border-t border-border/60 bg-[#F5F7FA]">
+        <section className="relative z-10 border-t border-border/60 bg-[hsl(var(--surface-soft))]">
           <div className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
             <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {features.map((feature) => (
                 <li
                   key={feature.title}
-                  className="landing-feature-card group rounded-2xl border border-x-[#E2E8F0] border-b-[#E2E8F0] border-t-4 bg-[#FFFFFF] p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
+                  className="landing-feature-card group rounded-2xl border border-x-border border-b-border border-t-4 bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"
                   style={{ borderTopColor: feature.accentColor }}
                 >
                   <span
@@ -291,10 +293,10 @@ export function LandingPage() {
                   >
                     <feature.icon className="h-5 w-5" aria-hidden />
                   </span>
-                  <h2 className="mt-4 font-display text-lg font-semibold tracking-tight text-[#1E293B]">
+                  <h2 className="mt-4 font-display text-lg font-semibold tracking-tight text-foreground">
                     {feature.title}
                   </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-[#64748B]">
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {feature.description}
                   </p>
                 </li>
@@ -326,7 +328,7 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-border/60 bg-white py-6">
+      <footer className="relative z-10 border-t border-border/60 bg-card py-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 text-sm text-muted-foreground sm:flex-row md:px-8">
           <span className="flex items-center gap-2 font-medium text-foreground">
             <Crown className="h-4 w-4 text-[#D4AF37]" aria-hidden />

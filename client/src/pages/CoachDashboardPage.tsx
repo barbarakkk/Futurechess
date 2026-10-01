@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
+  Inbox,
   UserRound,
   Upload,
   X,
@@ -117,6 +118,23 @@ function dateKey(year: number, month: number, day: number): string {
   return `${year}-${pad2(month + 1)}-${pad2(day)}`;
 }
 
+type DashboardTab = "profile" | "availability" | "bookings";
+
+type DayHours = { startMinute: number; endMinute: number };
+
+const DEFAULT_START_MINUTE = 10 * 60;
+const DEFAULT_END_MINUTE = 18 * 60;
+// Half-hour steps from 06:00 to 22:00 (all UTC, matching the wizard's availability step).
+const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => 6 * 60 + i * 30);
+const START_TIME_OPTIONS = TIME_OPTIONS.slice(0, -1);
+
+function formatMinutes(minutes: number): string {
+  return `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
+}
+
+const timeSelectClass =
+  "h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 function getMonthCells(year: number, month: number): (number | null)[] {
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -133,11 +151,15 @@ export function CoachDashboardPage() {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [selectedDates, setSelectedDates] = useState<Map<string, DayHours>>(new Map());
+  // Hours given to newly picked days, and applied to every selected day on "Apply".
+  const [bulkStart, setBulkStart] = useState(DEFAULT_START_MINUTE);
+  const [bulkEnd, setBulkEnd] = useState(DEFAULT_END_MINUTE);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [tab, setTab] = useState<DashboardTab>("profile");
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
@@ -168,8 +190,19 @@ export function CoachDashboardPage() {
   const loadAvailability = useCallback(async () => {
     try {
       const response = await api.get("/coach/availability-exceptions");
-      const exceptions: { date: string }[] = response.data.exceptions ?? [];
-      setSelectedDates(new Set(exceptions.map((exception) => exception.date)));
+      const exceptions: { date: string; startMinute?: number | null; endMinute?: number | null }[] =
+        response.data.exceptions ?? [];
+      setSelectedDates(
+        new Map(
+          exceptions.map((exception) => [
+            exception.date,
+            {
+              startMinute: exception.startMinute ?? DEFAULT_START_MINUTE,
+              endMinute: exception.endMinute ?? DEFAULT_END_MINUTE,
+            },
+          ]),
+        ),
+      );
       setAvailabilityError("");
     } catch (requestError: any) {
       setAvailabilityError(getApiErrorMessage(requestError, t("errors.loadRules")));
@@ -316,14 +349,28 @@ export function CoachDashboardPage() {
     }
     const key = dateKey(viewYear, viewMonth, day);
     setSelectedDates((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       if (next.has(key)) {
         next.delete(key);
       } else {
-        next.add(key);
+        next.set(key, { startMinute: bulkStart, endMinute: bulkEnd });
       }
       return next;
     });
+    setSaved(false);
+  }
+
+  function handleBulkStartChange(value: number) {
+    setBulkStart(value);
+    if (bulkEnd <= value) {
+      setBulkEnd(Math.min(value + 60, TIME_OPTIONS[TIME_OPTIONS.length - 1]));
+    }
+  }
+
+  function applyHoursToSelected() {
+    setSelectedDates(
+      (prev) => new Map([...prev.keys()].map((key) => [key, { startMinute: bulkStart, endMinute: bulkEnd }])),
+    );
     setSaved(false);
   }
 
@@ -349,9 +396,13 @@ export function CoachDashboardPage() {
     setSavingAvailability(true);
     setAvailabilityError("");
     try {
-      const response = await api.put("/coach/availability-exceptions", { dates: [...selectedDates] });
-      const dates: string[] = response.data.dates ?? [];
-      setSelectedDates(new Set(dates));
+      const response = await api.put("/coach/availability-exceptions", {
+        exceptions: [...selectedDates].map(([date, hours]) => ({ date, ...hours })),
+      });
+      const saved: { date: string; startMinute: number; endMinute: number }[] = response.data.exceptions ?? [];
+      setSelectedDates(
+        new Map(saved.map(({ date, startMinute, endMinute }) => [date, { startMinute, endMinute }])),
+      );
       setSaved(true);
     } catch (requestError: any) {
       setAvailabilityError(getApiErrorMessage(requestError, t("errors.saveRules")));
@@ -374,12 +425,17 @@ export function CoachDashboardPage() {
   }
 
   const pendingBookings = bookings.filter((b) => b.status === "pending");
+  const dashboardTabs = [
+    { id: "profile", label: t("profile.title"), icon: UserRound, count: 0 },
+    { id: "availability", label: t("availability.title"), icon: CalendarClock, count: 0 },
+    { id: "bookings", label: t("bookings.title"), icon: Inbox, count: pendingBookings.length },
+  ] as const;
   const otherBookings = bookings.filter((b) => b.status !== "pending");
 
   const cells = getMonthCells(viewYear, viewMonth);
   const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
   const monthPrefix = `${viewYear}-${pad2(viewMonth + 1)}-`;
-  const selectedThisMonth = [...selectedDates].filter((key) => key.startsWith(monthPrefix));
+  const selectedThisMonth = [...selectedDates.keys()].filter((key) => key.startsWith(monthPrefix));
   const totalSelected = selectedDates.size;
 
   const monthLabel = new Intl.DateTimeFormat(i18n.language, { month: "long", year: "numeric" }).format(
@@ -394,9 +450,24 @@ export function CoachDashboardPage() {
     return Array.from({ length: 7 }, (_, i) => formatter.format(new Date(2024, 0, 7 + i)));
   }, [i18n.language]);
 
+  // Selected days grouped by their hours, so a bulk edit is visible at a glance.
+  const hoursGroups = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const [key, hours] of [...selectedDates].sort(([a], [b]) => a.localeCompare(b))) {
+      const label = `${formatMinutes(hours.startMinute)}–${formatMinutes(hours.endMinute)}`;
+      groups.set(label, [...(groups.get(label) ?? []), key]);
+    }
+    return [...groups];
+  }, [selectedDates]);
+  const shortDateFormatter = new Intl.DateTimeFormat(i18n.language, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+
   function clearThisMonth() {
     setSelectedDates((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       selectedThisMonth.forEach((key) => next.delete(key));
       return next;
     });
@@ -413,599 +484,704 @@ export function CoachDashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("title")}</h1>
       </div>
 
-      <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <UserRound className="h-5 w-5 text-primary" aria-hidden />
-            {t("profile.title")}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{t("profile.subtitle")}</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingProfile ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
+      <div
+        role="tablist"
+        aria-label={t("title")}
+        className="sticky top-0 z-10 -mx-1 flex gap-1 rounded-2xl border border-border/80 bg-card/90 p-1 shadow-soft backdrop-blur-md"
+      >
+        {dashboardTabs.map(({ id, label, icon: Icon, count }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-[transform,background-color,color] duration-150 ease-out active:scale-[0.98]",
+              tab === id
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="truncate">{label}</span>
+            {count > 0 ? (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px] font-bold leading-5",
+                  tab === id ? "bg-card/25 text-primary-foreground" : "bg-primary text-primary-foreground",
+                )}
+              >
+                {count}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
 
-          {!loadingProfile && profileForm ? (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-name" className="text-sm font-medium">
-                    {t("profile.name")}
-                  </label>
-                  <Input
-                    id="coach-profile-name"
-                    required
-                    value={profileForm.name}
-                    onChange={(event) => updateProfileField("name", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-surname" className="text-sm font-medium">
-                    {t("profile.surname")}
-                  </label>
-                  <Input
-                    id="coach-profile-surname"
-                    required
-                    value={profileForm.surname}
-                    onChange={(event) => updateProfileField("surname", event.target.value)}
-                  />
-                </div>
-              </div>
+      <div key={tab} role="tabpanel" className="panel-enter space-y-6">
+        {tab === "profile" ? (
+          <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <UserRound className="h-5 w-5 text-primary" aria-hidden />
+                {t("profile.title")}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t("profile.subtitle")}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingProfile ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-title" className="text-sm font-medium">
-                    {t("profile.titleField")}
-                  </label>
-                  <Input
-                    id="coach-profile-title"
-                    required
-                    value={profileForm.title}
-                    onChange={(event) => updateProfileField("title", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-fide-id" className="text-sm font-medium">
-                    {t("profile.fideId")}
-                  </label>
-                  <Input
-                    id="coach-profile-fide-id"
-                    value={profileForm.fideId}
-                    onChange={(event) => updateProfileField("fideId", event.target.value)}
-                  />
-                </div>
-              </div>
+              {!loadingProfile && profileForm ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-name" className="text-sm font-medium">
+                        {t("profile.name")}
+                      </label>
+                      <Input
+                        id="coach-profile-name"
+                        required
+                        value={profileForm.name}
+                        onChange={(event) => updateProfileField("name", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-surname" className="text-sm font-medium">
+                        {t("profile.surname")}
+                      </label>
+                      <Input
+                        id="coach-profile-surname"
+                        required
+                        value={profileForm.surname}
+                        onChange={(event) => updateProfileField("surname", event.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-experience" className="text-sm font-medium">
-                    {t("profile.experienceYears")}
-                  </label>
-                  <Input
-                    id="coach-profile-experience"
-                    type="number"
-                    min={0}
-                    max={80}
-                    required
-                    value={profileForm.experienceYears}
-                    onChange={(event) => updateProfileField("experienceYears", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-rating" className="text-sm font-medium">
-                    {t("profile.fideRating")}
-                  </label>
-                  <Input
-                    id="coach-profile-rating"
-                    type="number"
-                    min={0}
-                    max={4000}
-                    value={profileForm.fideRating}
-                    onChange={(event) => updateProfileField("fideRating", event.target.value)}
-                  />
-                </div>
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-title" className="text-sm font-medium">
+                        {t("profile.titleField")}
+                      </label>
+                      <Input
+                        id="coach-profile-title"
+                        required
+                        value={profileForm.title}
+                        onChange={(event) => updateProfileField("title", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-fide-id" className="text-sm font-medium">
+                        {t("profile.fideId")}
+                      </label>
+                      <Input
+                        id="coach-profile-fide-id"
+                        value={profileForm.fideId}
+                        onChange={(event) => updateProfileField("fideId", event.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <label htmlFor="coach-profile-bio" className="text-sm font-medium">
-                  {t("profile.bio")}
-                </label>
-                <textarea
-                  id="coach-profile-bio"
-                  rows={4}
-                  maxLength={2000}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={profileForm.bio}
-                  onChange={(event) => updateProfileField("bio", event.target.value)}
-                />
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-experience" className="text-sm font-medium">
+                        {t("profile.experienceYears")}
+                      </label>
+                      <Input
+                        id="coach-profile-experience"
+                        type="number"
+                        min={0}
+                        max={80}
+                        required
+                        value={profileForm.experienceYears}
+                        onChange={(event) => updateProfileField("experienceYears", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-rating" className="text-sm font-medium">
+                        {t("profile.fideRating")}
+                      </label>
+                      <Input
+                        id="coach-profile-rating"
+                        type="number"
+                        min={0}
+                        max={4000}
+                        value={profileForm.fideRating}
+                        onChange={(event) => updateProfileField("fideRating", event.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <label htmlFor="coach-profile-specialization" className="text-sm font-medium">
-                  {t("profile.specialization")}
-                </label>
-                <select
-                  id="coach-profile-specialization"
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={profileForm.specialization}
-                  onChange={(event) =>
-                    updateProfileField("specialization", event.target.value as SpecializationValue)
-                  }
-                >
-                  <option value="" disabled>
-                    {t("profile.specializationPlaceholder")}
-                  </option>
-                  {SPECIALIZATION_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {t(`profile.${option.labelKey}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div className="space-y-2">
+                    <label htmlFor="coach-profile-bio" className="text-sm font-medium">
+                      {t("profile.bio")}
+                    </label>
+                    <textarea
+                      id="coach-profile-bio"
+                      rows={4}
+                      maxLength={2000}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={profileForm.bio}
+                      onChange={(event) => updateProfileField("bio", event.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2" ref={languagesMenuRef}>
-                <span className="text-sm font-medium">{t("profile.languages")}</span>
-                <div className="relative">
-                  <button
-                    type="button"
-                    aria-haspopup="listbox"
-                    aria-expanded={languagesOpen}
-                    onClick={() => setLanguagesOpen((prev) => !prev)}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span
-                      className={`truncate text-left ${profileForm.languages.length ? "" : "text-muted-foreground"}`}
+                  <div className="space-y-2">
+                    <label htmlFor="coach-profile-specialization" className="text-sm font-medium">
+                      {t("profile.specialization")}
+                    </label>
+                    <select
+                      id="coach-profile-specialization"
+                      required
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={profileForm.specialization}
+                      onChange={(event) =>
+                        updateProfileField("specialization", event.target.value as SpecializationValue)
+                      }
                     >
-                      {profileForm.languages.length > 0
-                        ? profileForm.languages
-                            .map((value) => {
-                              const option = LANGUAGE_OPTIONS.find((item) => item.value === value);
-                              return option ? t(`profile.${option.labelKey}`) : value;
-                            })
-                            .join(", ")
-                        : t("profile.languagesPlaceholder")}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                  </button>
+                      <option value="" disabled>
+                        {t("profile.specializationPlaceholder")}
+                      </option>
+                      {SPECIALIZATION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {t(`profile.${option.labelKey}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                  {languagesOpen ? (
-                    <div
-                      role="listbox"
-                      className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card p-2 shadow-soft"
-                    >
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-                        {LANGUAGE_OPTIONS.map((option) => (
-                          <label
-                            key={option.value}
-                            htmlFor={`coach-profile-language-${option.value}`}
-                            className="flex items-center gap-2 rounded px-1.5 py-1 text-sm transition-colors hover:bg-secondary"
-                          >
-                            <input
-                              id={`coach-profile-language-${option.value}`}
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              checked={profileForm.languages.includes(option.value)}
-                              onChange={() => toggleProfileLanguage(option.value)}
-                            />
-                            {t(`profile.${option.labelKey}`)}
-                          </label>
+                  <div className="space-y-2" ref={languagesMenuRef}>
+                    <span className="text-sm font-medium">{t("profile.languages")}</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded={languagesOpen}
+                        onClick={() => setLanguagesOpen((prev) => !prev)}
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span
+                          className={`truncate text-left ${profileForm.languages.length ? "" : "text-muted-foreground"}`}
+                        >
+                          {profileForm.languages.length > 0
+                            ? profileForm.languages
+                                .map((value) => {
+                                  const option = LANGUAGE_OPTIONS.find((item) => item.value === value);
+                                  return option ? t(`profile.${option.labelKey}`) : value;
+                                })
+                                .join(", ")
+                            : t("profile.languagesPlaceholder")}
+                        </span>
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      </button>
+
+                      {languagesOpen ? (
+                        <div
+                          role="listbox"
+                          className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card p-2 shadow-soft"
+                        >
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                            {LANGUAGE_OPTIONS.map((option) => (
+                              <label
+                                key={option.value}
+                                htmlFor={`coach-profile-language-${option.value}`}
+                                className="flex items-center gap-2 rounded px-1.5 py-1 text-sm transition-colors hover:bg-secondary"
+                              >
+                                <input
+                                  id={`coach-profile-language-${option.value}`}
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  checked={profileForm.languages.includes(option.value)}
+                                  onChange={() => toggleProfileLanguage(option.value)}
+                                />
+                                {t(`profile.${option.labelKey}`)}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium">{t("profile.photo")}</span>
+                    <div className="flex items-center gap-3">
+                      {profileForm.photoDataUrl ? (
+                        <img
+                          src={profileForm.photoDataUrl}
+                          alt=""
+                          className="h-10 w-10 rounded-full border border-border object-cover"
+                        />
+                      ) : null}
+                      <label
+                        htmlFor="coach-profile-photo"
+                        className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+                      >
+                        <Upload className="h-4 w-4" aria-hidden />
+                        {photoBusy
+                          ? t("profile.photoUploading")
+                          : profileForm.photoDataUrl
+                            ? t("profile.photoChange")
+                            : t("profile.photoUpload")}
+                      </label>
+                      <input
+                        id="coach-profile-photo"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="sr-only"
+                        onChange={handleProfilePhotoChange}
+                      />
+                      {profileForm.photoDataUrl ? (
+                        <button
+                          type="button"
+                          aria-label={t("profile.photoRemove")}
+                          className="text-muted-foreground transition hover:text-foreground"
+                          onClick={() => updateProfileField("photoDataUrl", "")}
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-rate" className="text-sm font-medium">
+                        {t("profile.hourlyRate")}
+                      </label>
+                      <Input
+                        id="coach-profile-rate"
+                        type="number"
+                        min={0}
+                        required
+                        value={profileForm.hourlyRate}
+                        onChange={(event) => updateProfileField("hourlyRate", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-currency" className="text-sm font-medium">
+                        {t("profile.currency")}
+                      </label>
+                      <select
+                        id="coach-profile-currency"
+                        required
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={profileForm.hourlyRateCurrency}
+                        onChange={(event) =>
+                          updateProfileField("hourlyRateCurrency", event.target.value as CurrencyValue)
+                        }
+                      >
+                        {CURRENCY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
                         ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="coach-profile-phone" className="text-sm font-medium">
+                      {t("profile.phone")}
+                    </label>
+                    <Input
+                      id="coach-profile-phone"
+                      type="tel"
+                      required
+                      value={profileForm.phone}
+                      onChange={(event) => updateProfileField("phone", event.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-whatsapp" className="text-sm font-medium">
+                        {t("profile.whatsapp")}
+                      </label>
+                      <Input
+                        id="coach-profile-whatsapp"
+                        type="tel"
+                        value={profileForm.whatsapp}
+                        onChange={(event) => updateProfileField("whatsapp", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-whatsapp-link" className="text-sm font-medium">
+                        {t("profile.whatsappLink")}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="coach-profile-whatsapp-link"
+                          type="url"
+                          value={profileForm.whatsappLink}
+                          onChange={(event) => updateProfileField("whatsappLink", event.target.value)}
+                        />
+                        <a
+                          href={profileForm.whatsappLink.trim() || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={t("profile.openWhatsappAria")}
+                          aria-disabled={!profileForm.whatsappLink.trim()}
+                          onClick={(event) => {
+                            if (!profileForm.whatsappLink.trim()) event.preventDefault();
+                          }}
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-[#25D366] transition-colors hover:bg-accent",
+                            !profileForm.whatsappLink.trim() && "pointer-events-none opacity-40"
+                          )}
+                        >
+                          <WhatsAppIcon className="h-5 w-5" />
+                        </a>
                       </div>
                     </div>
-                  ) : null}
-                </div>
-              </div>
+                  </div>
 
-              <div className="space-y-2">
-                <span className="text-sm font-medium">{t("profile.photo")}</span>
-                <div className="flex items-center gap-3">
-                  {profileForm.photoDataUrl ? (
-                    <img
-                      src={profileForm.photoDataUrl}
-                      alt=""
-                      className="h-10 w-10 rounded-full border border-border object-cover"
-                    />
-                  ) : null}
-                  <label
-                    htmlFor="coach-profile-photo"
-                    className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
-                  >
-                    <Upload className="h-4 w-4" aria-hidden />
-                    {photoBusy
-                      ? t("profile.photoUploading")
-                      : profileForm.photoDataUrl
-                        ? t("profile.photoChange")
-                        : t("profile.photoUpload")}
-                  </label>
-                  <input
-                    id="coach-profile-photo"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="sr-only"
-                    onChange={handleProfilePhotoChange}
-                  />
-                  {profileForm.photoDataUrl ? (
-                    <button
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-telegram" className="text-sm font-medium">
+                        {t("profile.telegram")}
+                      </label>
+                      <Input
+                        id="coach-profile-telegram"
+                        value={profileForm.telegram}
+                        onChange={(event) => updateProfileField("telegram", event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="coach-profile-telegram-link" className="text-sm font-medium">
+                        {t("profile.telegramLink")}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="coach-profile-telegram-link"
+                          type="url"
+                          value={profileForm.telegramLink}
+                          onChange={(event) => updateProfileField("telegramLink", event.target.value)}
+                        />
+                        <a
+                          href={profileForm.telegramLink.trim() || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={t("profile.openTelegramAria")}
+                          aria-disabled={!profileForm.telegramLink.trim()}
+                          onClick={(event) => {
+                            if (!profileForm.telegramLink.trim()) event.preventDefault();
+                          }}
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-[#229ED9] transition-colors hover:bg-accent",
+                            !profileForm.telegramLink.trim() && "pointer-events-none opacity-40"
+                          )}
+                        >
+                          <TelegramIcon className="h-5 w-5" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+
+              {profileError ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {profileError}
+                </p>
+              ) : null}
+
+              <Button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={savingProfile || loadingProfile || !profileForm}
+                className={cn(profileSaved && "bg-emerald-600 hover:opacity-90")}
+              >
+                {savingProfile ? (
+                  t("profile.saving")
+                ) : profileSaved ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="h-4 w-4" aria-hidden />
+                    {t("profile.saved")}
+                  </span>
+                ) : (
+                  t("profile.save")
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {tab === "availability" ? (
+          <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CalendarClock className="h-5 w-5 text-primary" aria-hidden />
+                {t("availability.title")}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t("availability.subtitle")}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingAvailability ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
+
+              {!loadingAvailability ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Button
                       type="button"
-                      aria-label={t("profile.photoRemove")}
-                      className="text-muted-foreground transition hover:text-foreground"
-                      onClick={() => updateProfileField("photoDataUrl", "")}
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToPreviousMonth}
+                      aria-label={t("availability.prevMonth")}
+                    >
+                      <ChevronLeft className="h-4 w-4" aria-hidden />
+                    </Button>
+                    <p className="text-sm font-semibold capitalize">{monthLabel}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToNextMonth}
+                      aria-label={t("availability.nextMonth")}
+                    >
+                      <ChevronRight className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {weekdayLabels.map((label, i) => (
+                      <div key={`${label}-${i}`} className="text-xs font-medium uppercase text-muted-foreground">
+                        {label}
+                      </div>
+                    ))}
+
+                    {cells.map((day, i) => {
+                      const key = day ? dateKey(viewYear, viewMonth, day) : null;
+                      const isSelected = Boolean(key && selectedDates.has(key));
+                      const past = day ? isPast(day) : false;
+                      const isToday = key === todayKey;
+
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          disabled={!day || past}
+                          onClick={() => toggleDay(day)}
+                          title={
+                            isSelected && key
+                              ? `${formatMinutes(selectedDates.get(key)!.startMinute)}–${formatMinutes(selectedDates.get(key)!.endMinute)} UTC`
+                              : undefined
+                          }
+                          className={cn(
+                            "flex aspect-square items-center justify-center rounded-md border border-transparent text-sm transition-colors",
+                            !day && "cursor-default",
+                            day && past && "cursor-default text-muted-foreground/40",
+                            day && !past && !isSelected && "text-foreground hover:bg-secondary",
+                            day && !past && isSelected && "border-primary bg-primary font-semibold text-primary-foreground",
+                            day && !past && !isSelected && isToday && "border-primary font-semibold text-primary",
+                          )}
+                        >
+                          {day ?? ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-[3px] bg-primary" aria-hidden />
+                      {t("availability.legendAvailable")}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-[3px] border border-primary" aria-hidden />
+                      {t("availability.legendToday")}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-[3px] bg-secondary" aria-hidden />
+                      {t("availability.legendUnavailable")}
+                    </span>
+                  </div>
+
+                  {totalSelected > 0 ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-secondary px-3.5 py-2.5">
+                      <span className="text-sm font-medium text-primary">
+                        {t("availability.daysSelected", { count: totalSelected })}
+                        {selectedThisMonth.length > 0
+                          ? t("availability.thisMonthSuffix", { count: selectedThisMonth.length })
+                          : null}
+                      </span>
+                      {selectedThisMonth.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={clearThisMonth}
+                          className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
+                        >
+                          {t("availability.clearMonth", { month: monthOnlyLabel })}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-3 rounded-lg border border-border/70 p-3.5">
+                    <div>
+                      <p className="text-sm font-semibold">{t("availability.hoursTitle")}</p>
+                      <p className="text-xs text-muted-foreground">{t("availability.hoursHint")}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={bulkStart}
+                        onChange={(event) => handleBulkStartChange(Number(event.target.value))}
+                        aria-label={t("availability.startTime")}
+                        className={timeSelectClass}
+                      >
+                        {START_TIME_OPTIONS.map((minutes) => (
+                          <option key={minutes} value={minutes}>
+                            {formatMinutes(minutes)}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-muted-foreground" aria-hidden>
+                        –
+                      </span>
+                      <select
+                        value={bulkEnd}
+                        onChange={(event) => setBulkEnd(Number(event.target.value))}
+                        aria-label={t("availability.endTime")}
+                        className={timeSelectClass}
+                      >
+                        {TIME_OPTIONS.filter((minutes) => minutes > bulkStart).map((minutes) => (
+                          <option key={minutes} value={minutes}>
+                            {formatMinutes(minutes)}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={totalSelected === 0}
+                        onClick={applyHoursToSelected}
+                      >
+                        {t("availability.applyToAll", { count: totalSelected })}
+                      </Button>
+                    </div>
+                    {hoursGroups.length > 0 ? (
+                      <ul className="space-y-1.5 text-xs">
+                        {hoursGroups.map(([label, keys]) => (
+                          <li key={label} className="flex gap-2">
+                            <span className="shrink-0 font-semibold text-foreground">{label}</span>
+                            <span className="text-muted-foreground">
+                              {keys.map((key) => shortDateFormatter.format(new Date(`${key}T00:00:00Z`))).join(", ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              <p className="text-xs text-muted-foreground">{t("availability.utcNote")}</p>
+
+              {availabilityError ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {availabilityError}
+                </p>
+              ) : null}
+
+              <Button
+                type="button"
+                onClick={handleSaveAvailability}
+                disabled={savingAvailability || loadingAvailability}
+                className={cn(saved && "bg-emerald-600 hover:opacity-90")}
+              >
+                {savingAvailability ? (
+                  t("availability.saving")
+                ) : saved ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="h-4 w-4" aria-hidden />
+                    {t("availability.saved")}
+                  </span>
+                ) : totalSelected === 0 ? (
+                  t("availability.save")
+                ) : (
+                  t("availability.saveCount", { count: totalSelected })
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {tab === "bookings" ? (
+          <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">{t("bookings.title")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingBookings ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
+              {bookingsError ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {bookingsError}
+                </p>
+              ) : null}
+              {!loadingBookings && bookings.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("bookings.empty")}</p>
+              ) : null}
+
+              {pendingBookings.map((booking) => (
+                <div key={booking.id} className="space-y-2 rounded-lg border border-border/80 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{booking.user.username}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatSlotRange(booking.slot.startTime, booking.slot.endTime)}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{t("bookings.statusLabel.pending")}</Badge>
+                  </div>
+                  {booking.note ? <p className="text-sm text-muted-foreground">"{booking.note}"</p> : null}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={respondingId === booking.id}
+                      onClick={() => handleRespond(booking.id, "accept")}
+                      className="gap-1.5"
+                    >
+                      <Check className="h-4 w-4" aria-hidden />
+                      {t("bookings.accept")}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={respondingId === booking.id}
+                      onClick={() => handleRespond(booking.id, "decline")}
+                      className="gap-1.5"
                     >
                       <X className="h-4 w-4" aria-hidden />
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-rate" className="text-sm font-medium">
-                    {t("profile.hourlyRate")}
-                  </label>
-                  <Input
-                    id="coach-profile-rate"
-                    type="number"
-                    min={0}
-                    required
-                    value={profileForm.hourlyRate}
-                    onChange={(event) => updateProfileField("hourlyRate", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-currency" className="text-sm font-medium">
-                    {t("profile.currency")}
-                  </label>
-                  <select
-                    id="coach-profile-currency"
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={profileForm.hourlyRateCurrency}
-                    onChange={(event) =>
-                      updateProfileField("hourlyRateCurrency", event.target.value as CurrencyValue)
-                    }
-                  >
-                    {CURRENCY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="coach-profile-phone" className="text-sm font-medium">
-                  {t("profile.phone")}
-                </label>
-                <Input
-                  id="coach-profile-phone"
-                  type="tel"
-                  required
-                  value={profileForm.phone}
-                  onChange={(event) => updateProfileField("phone", event.target.value)}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-whatsapp" className="text-sm font-medium">
-                    {t("profile.whatsapp")}
-                  </label>
-                  <Input
-                    id="coach-profile-whatsapp"
-                    type="tel"
-                    value={profileForm.whatsapp}
-                    onChange={(event) => updateProfileField("whatsapp", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-whatsapp-link" className="text-sm font-medium">
-                    {t("profile.whatsappLink")}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="coach-profile-whatsapp-link"
-                      type="url"
-                      value={profileForm.whatsappLink}
-                      onChange={(event) => updateProfileField("whatsappLink", event.target.value)}
-                    />
-                    <a
-                      href={profileForm.whatsappLink.trim() || undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={t("profile.openWhatsappAria")}
-                      aria-disabled={!profileForm.whatsappLink.trim()}
-                      onClick={(event) => {
-                        if (!profileForm.whatsappLink.trim()) event.preventDefault();
-                      }}
-                      className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-[#25D366] transition-colors hover:bg-accent",
-                        !profileForm.whatsappLink.trim() && "pointer-events-none opacity-40"
-                      )}
-                    >
-                      <WhatsAppIcon className="h-5 w-5" />
-                    </a>
+                      {t("bookings.decline")}
+                    </Button>
                   </div>
                 </div>
-              </div>
+              ))}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-telegram" className="text-sm font-medium">
-                    {t("profile.telegram")}
-                  </label>
-                  <Input
-                    id="coach-profile-telegram"
-                    value={profileForm.telegram}
-                    onChange={(event) => updateProfileField("telegram", event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="coach-profile-telegram-link" className="text-sm font-medium">
-                    {t("profile.telegramLink")}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="coach-profile-telegram-link"
-                      type="url"
-                      value={profileForm.telegramLink}
-                      onChange={(event) => updateProfileField("telegramLink", event.target.value)}
-                    />
-                    <a
-                      href={profileForm.telegramLink.trim() || undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={t("profile.openTelegramAria")}
-                      aria-disabled={!profileForm.telegramLink.trim()}
-                      onClick={(event) => {
-                        if (!profileForm.telegramLink.trim()) event.preventDefault();
-                      }}
-                      className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-[#229ED9] transition-colors hover:bg-accent",
-                        !profileForm.telegramLink.trim() && "pointer-events-none opacity-40"
-                      )}
-                    >
-                      <TelegramIcon className="h-5 w-5" />
-                    </a>
+              {otherBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 p-3 opacity-80"
+                >
+                  <div>
+                    <p className="font-medium">{booking.user.username}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatSlotRange(booking.slot.startTime, booking.slot.endTime)}
+                    </p>
                   </div>
+                  <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
+                    {t(`bookings.statusLabel.${booking.status}` as const)}
+                  </Badge>
                 </div>
-              </div>
-            </>
-          ) : null}
-
-          {profileError ? (
-            <p className="text-sm text-red-600" role="alert">
-              {profileError}
-            </p>
-          ) : null}
-
-          <Button
-            type="button"
-            onClick={handleSaveProfile}
-            disabled={savingProfile || loadingProfile || !profileForm}
-            className={cn(profileSaved && "bg-emerald-600 hover:opacity-90")}
-          >
-            {savingProfile ? (
-              t("profile.saving")
-            ) : profileSaved ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-4 w-4" aria-hidden />
-                {t("profile.saved")}
-              </span>
-            ) : (
-              t("profile.save")
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarClock className="h-5 w-5 text-primary" aria-hidden />
-            {t("availability.title")}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{t("availability.subtitle")}</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingAvailability ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
-
-          {!loadingAvailability ? (
-            <>
-              <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={goToPreviousMonth}
-                  aria-label={t("availability.prevMonth")}
-                >
-                  <ChevronLeft className="h-4 w-4" aria-hidden />
-                </Button>
-                <p className="text-sm font-semibold capitalize">{monthLabel}</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={goToNextMonth}
-                  aria-label={t("availability.nextMonth")}
-                >
-                  <ChevronRight className="h-4 w-4" aria-hidden />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {weekdayLabels.map((label, i) => (
-                  <div key={`${label}-${i}`} className="text-xs font-medium uppercase text-muted-foreground">
-                    {label}
-                  </div>
-                ))}
-
-                {cells.map((day, i) => {
-                  const key = day ? dateKey(viewYear, viewMonth, day) : null;
-                  const isSelected = Boolean(key && selectedDates.has(key));
-                  const past = day ? isPast(day) : false;
-                  const isToday = key === todayKey;
-
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      disabled={!day || past}
-                      onClick={() => toggleDay(day)}
-                      className={cn(
-                        "flex aspect-square items-center justify-center rounded-md border border-transparent text-sm transition-colors",
-                        !day && "cursor-default",
-                        day && past && "cursor-default text-muted-foreground/40",
-                        day && !past && !isSelected && "text-foreground hover:bg-[#eff6ff]",
-                        day && !past && isSelected && "border-primary bg-primary font-semibold text-primary-foreground",
-                        day && !past && !isSelected && isToday && "border-primary font-semibold text-primary",
-                      )}
-                    >
-                      {day ?? ""}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-wrap gap-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-primary" aria-hidden />
-                  {t("availability.legendAvailable")}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-[3px] border border-primary" aria-hidden />
-                  {t("availability.legendToday")}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-[3px] bg-secondary" aria-hidden />
-                  {t("availability.legendUnavailable")}
-                </span>
-              </div>
-
-              {totalSelected > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#eff6ff] px-3.5 py-2.5">
-                  <span className="text-sm font-medium text-primary">
-                    {t("availability.daysSelected", { count: totalSelected })}
-                    {selectedThisMonth.length > 0
-                      ? t("availability.thisMonthSuffix", { count: selectedThisMonth.length })
-                      : null}
-                  </span>
-                  {selectedThisMonth.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={clearThisMonth}
-                      className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
-                    >
-                      {t("availability.clearMonth", { month: monthOnlyLabel })}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </>
-          ) : null}
-
-          <p className="text-xs text-muted-foreground">{t("availability.utcNote")}</p>
-
-          {availabilityError ? (
-            <p className="text-sm text-red-600" role="alert">
-              {availabilityError}
-            </p>
-          ) : null}
-
-          <Button
-            type="button"
-            onClick={handleSaveAvailability}
-            disabled={savingAvailability || loadingAvailability}
-            className={cn(saved && "bg-emerald-600 hover:opacity-90")}
-          >
-            {savingAvailability ? (
-              t("availability.saving")
-            ) : saved ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-4 w-4" aria-hidden />
-                {t("availability.saved")}
-              </span>
-            ) : totalSelected === 0 ? (
-              t("availability.save")
-            ) : (
-              t("availability.saveCount", { count: totalSelected })
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">{t("bookings.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingBookings ? <p className="text-sm text-muted-foreground">{t("loading")}</p> : null}
-          {bookingsError ? (
-            <p className="text-sm text-red-600" role="alert">
-              {bookingsError}
-            </p>
-          ) : null}
-          {!loadingBookings && bookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("bookings.empty")}</p>
-          ) : null}
-
-          {pendingBookings.map((booking) => (
-            <div key={booking.id} className="space-y-2 rounded-lg border border-border/80 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium">{booking.user.username}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatSlotRange(booking.slot.startTime, booking.slot.endTime)}
-                  </p>
-                </div>
-                <Badge variant="outline">{t("bookings.statusLabel.pending")}</Badge>
-              </div>
-              {booking.note ? <p className="text-sm text-muted-foreground">"{booking.note}"</p> : null}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={respondingId === booking.id}
-                  onClick={() => handleRespond(booking.id, "accept")}
-                  className="gap-1.5"
-                >
-                  <Check className="h-4 w-4" aria-hidden />
-                  {t("bookings.accept")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={respondingId === booking.id}
-                  onClick={() => handleRespond(booking.id, "decline")}
-                  className="gap-1.5"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                  {t("bookings.decline")}
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          {otherBookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 p-3 opacity-80"
-            >
-              <div>
-                <p className="font-medium">{booking.user.username}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatSlotRange(booking.slot.startTime, booking.slot.endTime)}
-                </p>
-              </div>
-              <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
-                {t(`bookings.statusLabel.${booking.status}` as const)}
-              </Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
     </div>
   );
 }

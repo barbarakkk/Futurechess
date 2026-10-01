@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Clock, LayoutGrid, List, Search, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Clock, LayoutGrid, List, Search, Star } from "lucide-react";
 import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import { cn } from "../lib/utils";
@@ -26,6 +24,23 @@ type Coach = {
 };
 
 type ViewMode = "grid" | "list";
+type SortKey = "default" | "rating" | "priceLow" | "experience";
+
+const SORT_KEYS: SortKey[] = ["default", "rating", "priceLow", "experience"];
+
+// Hover lift only where hover really exists — on touch a tap would otherwise leave the card "stuck" raised.
+const CARD_CLASS =
+  "group block rounded-xl border border-border/80 bg-card/80 backdrop-blur-sm transition-[transform,box-shadow,border-color] duration-200 ease-out [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-1 [@media(hover:hover)_and_(pointer:fine)]:hover:border-primary/35 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-soft active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+// Short cascade on first paint; capped so a long list never makes the last card wait.
+function staggerStyle(index: number) {
+  return { animationDelay: `${Math.min(index, 8) * 40}ms` };
+}
+
+function formatRate(coach: Coach) {
+  if (coach.hourlyRate == null) return null;
+  return `${coach.hourlyRate} ${coach.hourlyRateCurrency ?? ""}`.trim();
+}
 
 // A small, deterministic rotation through the existing theme colors — no new
 // palette to maintain, and the same coach always lands on the same color.
@@ -57,7 +72,7 @@ function CoachAvatar({ coach, className }: { coach: Coach; className: string }) 
       <img
         src={coach.photoUrl}
         alt=""
-        className={cn(className, "shrink-0 rounded-full object-cover ring-2 ring-white")}
+        className={cn(className, "shrink-0 rounded-full object-cover ring-2 ring-card")}
       />
     );
   }
@@ -66,7 +81,7 @@ function CoachAvatar({ coach, className }: { coach: Coach; className: string }) 
       className={cn(
         className,
         avatarBgClass(coach.id),
-        "flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-white",
+        "flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-card",
       )}
       aria-hidden
     >
@@ -75,42 +90,40 @@ function CoachAvatar({ coach, className }: { coach: Coach; className: string }) 
   );
 }
 
-function CoachGridCard({ coach, t }: { coach: Coach; t: TFunction<"coaches"> }) {
+function CoachGridCard({ coach, index, t }: { coach: Coach; index: number; t: TFunction<"coaches"> }) {
+  const rate = formatRate(coach);
+
   return (
-    <Card className="flex flex-col border-border/80 bg-card/80 backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/35 hover:shadow-soft">
-      <CardContent className="flex flex-1 flex-col gap-4 p-4">
-        <div className="flex items-center gap-3">
-          <CoachAvatar coach={coach} className="h-12 w-12 text-sm" />
+    <Link to={`/coaches/${coach.id}`} className={cn(CARD_CLASS, "panel-enter flex flex-col")} style={staggerStyle(index)}>
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <div className="flex items-center gap-3.5">
+          <CoachAvatar coach={coach} className="h-14 w-14 text-base" />
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold leading-tight">
+            <p className="truncate text-base font-semibold leading-tight">
               {coach.name} {coach.surname}
             </p>
             {coach.title ? (
-              <span className="mt-1 inline-flex rounded bg-accent/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-wide text-accent">
+              <span className="mt-1.5 inline-flex rounded bg-accent/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-wide text-accent">
                 {coach.title}
               </span>
             ) : null}
           </div>
         </div>
 
-        <dl className="grid grid-cols-2 divide-x divide-border/70 rounded-lg bg-secondary/50 py-2">
-          <div className="px-3">
-            <dt className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-              <Star className="h-3 w-3" aria-hidden />
-              {t("directory.stat.rating")}
-            </dt>
-            <dd className="text-sm font-semibold tabular-nums">{coach.fideRating ?? "—"}</dd>
-          </div>
-          <div className="px-3">
-            <dt className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-              <Clock className="h-3 w-3" aria-hidden />
-              {t("directory.stat.experience")}
-            </dt>
-            <dd className="text-sm font-semibold tabular-nums">
-              {t("directory.stat.years", { years: coach.experienceYears })}
-            </dd>
-          </div>
-        </dl>
+        {coach.bio ? <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{coach.bio}</p> : null}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+          {coach.fideRating ? (
+            <span className="inline-flex items-center gap-1.5 font-semibold tabular-nums">
+              <Star className="h-3.5 w-3.5 text-accent" aria-hidden />
+              {t("directory.rating", { rating: coach.fideRating })}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" aria-hidden />
+            {t("directory.stat.years", { years: coach.experienceYears })}
+          </span>
+        </div>
 
         {coach.specialties.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -121,73 +134,87 @@ function CoachGridCard({ coach, t }: { coach: Coach; t: TFunction<"coaches"> }) 
             ))}
           </div>
         ) : null}
+      </div>
 
-        <div className="mt-auto">
-          <Link to={`/coaches/${coach.id}`}>
-            <Button
-              type="button"
-              size="sm"
-              className="w-full transition-transform duration-150 ease-out active:scale-[0.97]"
-            >
-              {t("directory.viewProfile")}
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex items-center justify-between gap-3 border-t border-border/70 px-5 py-3.5">
+        <span className="text-sm font-semibold tabular-nums">
+          {rate ? t("directory.hourlyRate", { rate }) : <span className="text-muted-foreground">—</span>}
+        </span>
+        <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+          {t("directory.viewProfile")}
+          <ArrowRight
+            className="h-4 w-4 transition-transform duration-200 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </span>
+      </div>
+    </Link>
   );
 }
 
-function CoachListRow({ coach, t }: { coach: Coach; t: TFunction<"coaches"> }) {
+function CoachListRow({ coach, index, t }: { coach: Coach; index: number; t: TFunction<"coaches"> }) {
+  const rate = formatRate(coach);
   const shownSpecialties = coach.specialties.slice(0, 2);
   const extraCount = coach.specialties.length - shownSpecialties.length;
 
   return (
-    <Card className="border-border/80 bg-card/80 backdrop-blur-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-soft">
-      <CardContent className="flex flex-wrap items-center gap-4 p-4">
-        <CoachAvatar coach={coach} className="h-12 w-12 text-sm" />
+    <Link
+      to={`/coaches/${coach.id}`}
+      className={cn(CARD_CLASS, "panel-enter flex flex-wrap items-center gap-x-5 gap-y-3 p-4 [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5")}
+      style={staggerStyle(index)}
+    >
+      <CoachAvatar coach={coach} className="h-12 w-12 text-sm" />
 
-        <div className="w-44 shrink-0 min-w-0">
-          <p className="truncate font-semibold">
-            {coach.name} {coach.surname}
-          </p>
-          <p className="truncate text-sm text-muted-foreground">{coach.title}</p>
-        </div>
+      <div className="min-w-0 flex-1 basis-44">
+        <p className="truncate font-semibold">
+          {coach.name} {coach.surname}
+        </p>
+        <p className="truncate text-sm text-muted-foreground">{coach.title}</p>
+      </div>
 
-        <div className="flex min-w-[140px] flex-grow flex-wrap gap-1.5">
-          {shownSpecialties.map((specialty) => (
-            <Badge key={specialty} variant="secondary">
-              {specialty}
-            </Badge>
-          ))}
-          {extraCount > 0 ? (
-            <span className="px-0.5 py-1 text-xs text-muted-foreground">+{extraCount}</span>
-          ) : null}
-        </div>
+      <div className="flex min-w-[140px] flex-1 flex-wrap gap-1.5">
+        {shownSpecialties.map((specialty) => (
+          <Badge key={specialty} variant="secondary">
+            {specialty}
+          </Badge>
+        ))}
+        {extraCount > 0 ? <span className="px-0.5 py-1 text-xs text-muted-foreground">+{extraCount}</span> : null}
+      </div>
 
-        <div className="flex shrink-0 items-center gap-4">
-          {coach.fideRating ? (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">
-              <Star className="h-3 w-3" aria-hidden />
-              {t("directory.rating", { rating: coach.fideRating })}
-            </span>
-          ) : null}
-          <span className="whitespace-nowrap text-xs text-muted-foreground">
-            {t("directory.experience", { years: coach.experienceYears })}
+      <div className="flex shrink-0 items-center gap-4 text-sm">
+        {coach.fideRating ? (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap font-semibold tabular-nums">
+            <Star className="h-3.5 w-3.5 text-accent" aria-hidden />
+            {coach.fideRating}
           </span>
-        </div>
+        ) : null}
+        <span className="whitespace-nowrap text-muted-foreground">{t("directory.stat.years", { years: coach.experienceYears })}</span>
+        {rate ? <span className="whitespace-nowrap font-semibold tabular-nums">{t("directory.hourlyRate", { rate })}</span> : null}
+        <ArrowRight
+          className="h-4 w-4 text-primary transition-transform duration-200 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </div>
+    </Link>
+  );
+}
 
-        <Link to={`/coaches/${coach.id}`} className="shrink-0">
-          <Button
-            type="button"
-            size="sm"
-            className="transition-transform duration-150 ease-out active:scale-[0.97]"
-          >
-            {t("directory.viewProfile")}
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+function CoachSkeletons({ view }: { view: ViewMode }) {
+  return (
+    <div
+      className={view === "grid" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}
+      aria-hidden
+    >
+      {Array.from({ length: view === "grid" ? 6 : 4 }, (_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "animate-pulse rounded-xl border border-border/60 bg-card/60",
+            view === "grid" ? "h-56" : "h-20",
+          )}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -198,6 +225,8 @@ export function CoachesPage() {
   const [error, setError] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [query, setQuery] = useState("");
+  const [language, setLanguage] = useState("all");
+  const [sort, setSort] = useState<SortKey>("default");
 
   useEffect(() => {
     let mounted = true;
@@ -227,44 +256,57 @@ export function CoachesPage() {
     };
   }, [t]);
 
+  const languages = useMemo(
+    () => [...new Set(coaches.flatMap((coach) => coach.languages))].sort((x, y) => x.localeCompare(y)),
+    [coaches],
+  );
+
   const filteredCoaches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return coaches.filter((coach) => matchesQuery(coach, normalizedQuery));
-  }, [coaches, query]);
+    const matches = coaches.filter(
+      (coach) =>
+        matchesQuery(coach, normalizedQuery) && (language === "all" || coach.languages.includes(language)),
+    );
+    if (sort === "rating") return [...matches].sort((x, y) => (y.fideRating ?? -1) - (x.fideRating ?? -1));
+    if (sort === "experience") return [...matches].sort((x, y) => y.experienceYears - x.experienceYears);
+    if (sort === "priceLow") {
+      return [...matches].sort((x, y) => (x.hourlyRate ?? Number.MAX_SAFE_INTEGER) - (y.hourlyRate ?? Number.MAX_SAFE_INTEGER));
+    }
+    return matches;
+  }, [coaches, query, language, sort]);
+
+  const selectClass =
+    "h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   return (
-    <div className="relative space-y-8">
+    <div className="relative space-y-6">
       <div className="pointer-events-none absolute inset-0 -z-10 opacity-40" aria-hidden>
         <div className="absolute -left-1/4 top-0 h-[320px] w-[320px] rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-[280px] w-[280px] rounded-full bg-accent/15 blur-3xl" />
       </div>
 
-      <div className="max-w-2xl">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-          {t("directory.badge")}
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("directory.title")}</h1>
-        <p className="mt-3 max-w-xl text-muted-foreground">{t("directory.subtitle")}</p>
-      </div>
+      <header className="max-w-2xl">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("directory.title")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground sm:text-base">{t("directory.subtitle")}</p>
+      </header>
 
       <div>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">{t("directory.loading")}</p>
-        ) : null}
+        {loading ? <CoachSkeletons view={view} /> : null}
         {error ? (
           <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
         {!loading && !error && coaches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("directory.empty")}</p>
+          <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-10 text-center text-sm text-muted-foreground">
+            {t("directory.empty")}
+          </p>
         ) : null}
 
         {coaches.length > 0 ? (
           <>
-            <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg border border-border/70 bg-card/70 p-3 shadow-soft backdrop-blur-md">
-              <div className="relative min-w-[240px] max-w-sm flex-1">
+            <div className="mb-5 flex flex-wrap items-center gap-3">
+              <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
                 <Search
                   className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                   aria-hidden
@@ -281,60 +323,89 @@ export function CoachesPage() {
                 />
               </div>
 
+              {languages.length > 1 ? (
+                <>
+                  <label htmlFor="coach-language" className="sr-only">
+                    {t("directory.languageLabel")}
+                  </label>
+                  <select
+                    id="coach-language"
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="all">{t("directory.languageAll")}</option>
+                    {languages.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+
+              <label htmlFor="coach-sort" className="sr-only">
+                {t("directory.sortLabel")}
+              </label>
+              <select
+                id="coach-sort"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as SortKey)}
+                className={selectClass}
+              >
+                {SORT_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`directory.sort.${key}`)}
+                  </option>
+                ))}
+              </select>
+
               <div
                 role="group"
                 aria-label={t("directory.viewToggleLabel")}
                 className="ml-auto inline-flex gap-1 rounded-md border border-border/70 bg-secondary/70 p-1"
               >
-                <button
-                  type="button"
-                  onClick={() => setView("grid")}
-                  aria-pressed={view === "grid"}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-sm px-3.5 py-2 text-sm font-semibold transition-all duration-150 ease-out active:scale-[0.96]",
-                    view === "grid"
-                      ? "bg-white text-primary shadow-sm"
-                      : "text-muted-foreground hover:text-primary",
-                  )}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-                  {t("directory.viewGrid")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  aria-pressed={view === "list"}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-sm px-3.5 py-2 text-sm font-semibold transition-all duration-150 ease-out active:scale-[0.96]",
-                    view === "list"
-                      ? "bg-white text-primary shadow-sm"
-                      : "text-muted-foreground hover:text-primary",
-                  )}
-                >
-                  <List className="h-3.5 w-3.5" aria-hidden />
-                  {t("directory.viewList")}
-                </button>
+                {(
+                  [
+                    { id: "grid", icon: LayoutGrid, label: t("directory.viewGrid") },
+                    { id: "list", icon: List, label: t("directory.viewList") },
+                  ] as const
+                ).map(({ id, icon: Icon, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setView(id)}
+                    aria-pressed={view === id}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-semibold transition-[transform,background-color,color,box-shadow] duration-150 ease-out active:scale-[0.96]",
+                      view === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-primary",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <p className="mb-4 pl-1 text-xs text-muted-foreground">
+            <p className="mb-4 text-xs font-medium text-muted-foreground" aria-live="polite">
               {t("directory.resultsCount", { count: filteredCoaches.length })}
             </p>
 
             {filteredCoaches.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {t("directory.searchEmpty", { query })}
+              <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-10 text-center text-sm text-muted-foreground">
+                {query.trim() ? t("directory.searchEmpty", { query }) : t("directory.filterEmpty")}
               </p>
             ) : view === "grid" ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredCoaches.map((coach) => (
-                  <CoachGridCard key={coach.id} coach={coach} t={t} />
+                {filteredCoaches.map((coach, index) => (
+                  <CoachGridCard key={coach.id} coach={coach} index={index} t={t} />
                 ))}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {filteredCoaches.map((coach) => (
-                  <CoachListRow key={coach.id} coach={coach} t={t} />
+                {filteredCoaches.map((coach, index) => (
+                  <CoachListRow key={coach.id} coach={coach} index={index} t={t} />
                 ))}
               </div>
             )}

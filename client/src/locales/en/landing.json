@@ -13,7 +13,7 @@
     },
     "playVsAi": {
       "title": "Play vs AI",
-      "description": "Open a new AI game, pick your side, and get moves powered by Stockfish."
+      "description": "Open a new AI game, pick your side, and get moves powered by our chess engine."
     },
     "dashboard": {
       "title": "Your dashboard",

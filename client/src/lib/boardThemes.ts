@@ -1,4 +1,4 @@
-export const BOARD_THEME_IDS = ["blue", "green", "wood", "purple", "grey", "red"] as const;
+export const BOARD_THEME_IDS = ["blue", "green", "wood", "mono", "grey", "red"] as const;
 
 export type BoardThemeId = (typeof BOARD_THEME_IDS)[number];
 
@@ -13,7 +13,7 @@ export const BOARD_THEMES: Record<BoardThemeId, BoardThemeColors> = {
   blue: { light: "#ffffff", dark: "#b8dcff" },
   green: { light: "#ffffdd", dark: "#86a666" },
   wood: { light: "#f0d9b5", dark: "#b58863" },
-  purple: { light: "#f3e8ff", dark: "#a78bfa" },
+  mono: { light: "#ffffff", dark: "#555555" },
   grey: { light: "#f0f0f0", dark: "#b0b0b0" },
   red: { light: "#ffffff", dark: "#e57373" },
 };

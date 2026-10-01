@@ -85,7 +85,7 @@
   },
   "playVsAi": {
     "title": "Play vs AI",
-    "description": "Adjustable strength — powered by Stockfish on the server.",
+    "description": "Adjustable strength — plays on our servers.",
     "difficulties": {
       "easy": "Easy",
       "medium": "Medium",

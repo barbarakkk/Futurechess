@@ -201,7 +201,7 @@ function StatTile({
   bar?: string;
 }) {
   return (
-    <div className="min-w-[88px] flex-1 rounded-2xl bg-white/60 px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+    <div className="min-w-[88px] flex-1 rounded-2xl bg-card/60 px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
       <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground whitespace-nowrap">
         {label}
       </p>
@@ -230,8 +230,8 @@ function Widget({
   return (
     <div
       className={cn(
-        "dashboard-in dashboard-lift relative overflow-hidden rounded-[28px] border border-white/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_1px_2px_rgba(15,23,42,0.04),0_18px_36px_-20px_rgba(15,70,150,0.32)] backdrop-blur-xl",
-        tint ?? "bg-white/70",
+        "dashboard-in dashboard-lift relative overflow-hidden rounded-[28px] border border-border/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_1px_2px_rgba(15,23,42,0.04),0_18px_36px_-20px_rgba(15,70,150,0.32)] backdrop-blur-xl",
+        tint ?? "bg-card/70",
         className,
       )}
     >
@@ -517,7 +517,7 @@ export function DashboardPage() {
           <div className="dashboard-in flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-5 py-3.5">
             <div className="flex min-w-0 items-center gap-2.5">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-              <p className="text-sm font-medium text-amber-900">{t("availabilityAlert.title")}</p>
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">{t("availabilityAlert.title")}</p>
             </div>
             <Button
               type="button"
@@ -575,7 +575,7 @@ export function DashboardPage() {
 
           <Widget tint="bg-gradient-to-br from-primary/15 to-primary/5">
             <div className="flex h-full flex-col justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-card/70 shadow-sm">
                 <Radar className="h-[18px] w-[18px] text-primary" aria-hidden />
               </span>
               <div>
@@ -594,7 +594,7 @@ export function DashboardPage() {
 
           <Widget tint="bg-gradient-to-br from-[#71808F]/15 to-[#71808F]/5">
             <div className="flex h-full flex-col justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-card/70 shadow-sm">
                 <Globe className="h-[18px] w-[18px] text-[#71808F]" aria-hidden />
               </span>
               <div>
@@ -613,7 +613,7 @@ export function DashboardPage() {
 
           <Widget tint="bg-gradient-to-br from-[#D4AF37]/15 to-[#D4AF37]/5">
             <div className="flex h-full flex-col justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-card/70 shadow-sm">
                 <Crown className="h-[18px] w-[18px] text-[#D4AF37]" aria-hidden />
               </span>
               <div>
@@ -719,7 +719,7 @@ export function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => navigate(`/game/${game.id}`)}
-                        className="dashboard-press flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1.5 text-left text-sm transition-colors hover:bg-white/60"
+                        className="dashboard-press flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1.5 text-left text-sm transition-colors hover:bg-card/60"
                       >
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className="font-medium">{game.timeControl}</span>
@@ -779,7 +779,7 @@ export function DashboardPage() {
                 ) : pendingRequests.length === 0 ? (
                   <EmptyNotice icon={Bell} title={t("bookingRequests.emptyTitle")} description={t("bookingRequests.emptyDescription")} />
                 ) : (
-                  <div className="flex-1 rounded-2xl bg-white/60 p-3">
+                  <div className="flex-1 rounded-2xl bg-card/60 p-3">
                     <p className="text-sm font-medium">{pendingRequests[0].user.username}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{formatShortTime(pendingRequests[0].slot.startTime)}</p>
                     {pendingRequests[0].note ? (
@@ -845,7 +845,7 @@ export function DashboardPage() {
                   <>
                     <ul className="flex-1 space-y-1.5">
                       {myBookings.map((booking) => (
-                        <li key={booking.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/60 px-2.5 py-2 text-sm">
+                        <li key={booking.id} className="flex items-center justify-between gap-2 rounded-xl bg-card/60 px-2.5 py-2 text-sm">
                           <span className="truncate font-medium">
                             {booking.coach.name} {booking.coach.surname}
                           </span>
@@ -889,7 +889,7 @@ export function DashboardPage() {
                 }}
                 placeholder={t("joinGame.placeholder")}
                 aria-label={t("joinGame.title")}
-                className="h-9 flex-1 border-white/60 bg-white/60 text-sm"
+                className="h-9 flex-1 border-border/60 bg-card/60 text-sm"
               />
               <Button type="submit" size="sm" className="dashboard-press shrink-0">
                 {t("joinGame.button")}

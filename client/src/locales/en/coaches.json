@@ -22,7 +22,17 @@
       "rating": "FIDE rating",
       "experience": "Experience",
       "years": "{{years}} yrs"
-    }
+    },
+    "languageLabel": "Filter by language",
+    "languageAll": "Any language",
+    "sortLabel": "Sort coaches",
+    "sort": {
+      "default": "Recommended",
+      "rating": "Highest rating",
+      "priceLow": "Lowest price",
+      "experience": "Most experience"
+    },
+    "filterEmpty": "No coaches match these filters. Try another language."
   },
   "detail": {
     "backLink": "Back to coaches",

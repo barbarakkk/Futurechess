@@ -11,6 +11,8 @@ const router = Router();
 const aiCreateSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
   userColor: z.enum(["white", "black"]),
+  // Optional custom starting position (from the Chess Board page). The player moves first.
+  fen: z.string().max(100).optional(),
 });
 
 const aiMoveSchema = z.object({
@@ -46,7 +48,7 @@ function getStatus(chess, result) {
   if (result) {
     return "finished";
   }
-  if (chess.moveNumber() === 1 && chess.history().length === 0) {
+  if (chess.history().length === 0) {
     return "ready";
   }
   return "active";
@@ -122,10 +124,46 @@ async function applyAiMoveIfNeeded(aiGame, chess) {
   return aiMove;
 }
 
+// Standard start, or a validated custom position. chess.js embeds SetUp/FEN headers in the PGN,
+// so the custom start survives the pgn round-trip without a schema change.
+function createStartChess({ fen, userColor }) {
+  if (!fen) {
+    return new Chess();
+  }
+
+  let chess;
+  try {
+    chess = new Chess(fen);
+  } catch (_error) {
+    throw createHttpError(400, "Invalid position");
+  }
+
+  // The side that just "moved" must not be in check, and the game must not already be over.
+  const parts = fen.trim().split(/\s+/);
+  parts[1] = parts[1] === "w" ? "b" : "w";
+  parts[3] = "-";
+  let flipped;
+  try {
+    flipped = new Chess(parts.join(" "));
+  } catch (_error) {
+    throw createHttpError(400, "Invalid position");
+  }
+  if (flipped.isCheck()) {
+    throw createHttpError(400, "Invalid position: the side not to move is in check");
+  }
+  if (getResultFromBoard(chess)) {
+    throw createHttpError(400, "This position is already a finished game");
+  }
+  if (chess.turn() !== (userColor === "white" ? "w" : "b")) {
+    throw createHttpError(400, "It must be the player's turn in the starting position");
+  }
+  return chess;
+}
+
 router.post("/", requireAuth, async (req, res, next) => {
   try {
     const body = aiCreateSchema.parse(req.body);
-    const chess = new Chess();
+    const chess = createStartChess(body);
 
     const aiGame = await prisma.aIGame.create({
       data: {
@@ -137,8 +175,7 @@ router.post("/", requireAuth, async (req, res, next) => {
       },
     });
 
-    const openingAiMove =
-      body.userColor === "black" ? await applyAiMoveIfNeeded(aiGame, chess) : null;
+    const openingAiMove = await applyAiMoveIfNeeded(aiGame, chess);
 
     const result = getResultFromBoard(chess);
     const updated = await prisma.aIGame.update({

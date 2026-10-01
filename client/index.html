@@ -10,6 +10,15 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Syne:wght@600;700;800&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Apply the saved/OS theme before first paint so dark mode doesn't flash light (see store/themeStore.ts).
+      try {
+        var t = localStorage.getItem("chesshub-theme");
+        if (t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
     <title>FutureChess</title>
   </head>
   <body>
