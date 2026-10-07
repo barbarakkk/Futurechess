@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { PasswordInput } from "../components/ui/password-input";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
 import { getSafeRedirect } from "../lib/redirect";
@@ -122,9 +123,8 @@ export function RegisterPage() {
                 <label htmlFor="register-password" className="text-sm font-medium">
                   {t("password")}
                 </label>
-                <Input
+                <PasswordInput
                   id="register-password"
-                  type="password"
                   autoComplete="new-password"
                   required
                   minLength={8}

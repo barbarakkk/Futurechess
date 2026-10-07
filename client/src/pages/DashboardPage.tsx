@@ -15,7 +15,6 @@ import {
   Globe,
   Handshake,
   Link2,
-  Radar,
   Swords,
   Trophy,
   Wallet,
@@ -576,7 +575,7 @@ export function DashboardPage() {
           <Widget tint="bg-gradient-to-br from-primary/15 to-primary/5">
             <div className="flex h-full flex-col justify-between">
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-card/70 shadow-sm">
-                <Radar className="h-[18px] w-[18px] text-primary" aria-hidden />
+                <Globe className="h-[18px] w-[18px] text-primary" aria-hidden />
               </span>
               <div>
                 <p className="text-sm font-semibold tracking-[-0.005em]">{t("playOnline.title")}</p>

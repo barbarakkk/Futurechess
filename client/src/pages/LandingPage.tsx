@@ -217,10 +217,6 @@ export function LandingPage() {
                 <span className="block">{t("heroTitleLine2")}</span>
               </h1>
 
-              <p className="landing-fade-up landing-fade-up-delay-2 mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                {t("heroSubtitle")}
-              </p>
-
               <div className="landing-fade-up landing-fade-up-delay-3 mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   to="/register"
@@ -311,9 +307,6 @@ export function LandingPage() {
               <div>
                 <p className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
                   {t("heroTitleLine1")} {t("heroTitleLine2")}
-                </p>
-                <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-                  {t("heroSubtitle")}
                 </p>
               </div>
               <Link

@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { PasswordInput } from "../components/ui/password-input";
 import { api } from "../lib/api";
 import { getApiErrorMessage } from "../lib/errors";
 import { getSafeRedirect } from "../lib/redirect";
@@ -108,9 +109,8 @@ export function LoginPage() {
                     {t("forgotPassword.link")}
                   </Link>
                 </div>
-                <Input
+                <PasswordInput
                   id="login-password"
-                  type="password"
                   autoComplete="current-password"
                   required
                   value={form.password}

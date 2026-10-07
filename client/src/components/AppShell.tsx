@@ -11,7 +11,7 @@ import {
   LogOut,
   Menu,
   PartyPopper,
-  Radar,
+  Globe,
   Settings,
   Sparkles,
   Swords,
@@ -75,7 +75,7 @@ export function AppShell() {
   // "Play" is a collapsible group in the sidebar rather than three separate top-level
   // links — these three routes are its contents.
   const playSubItems = [
-    { to: "/play-online", label: t("nav.playOnline"), icon: Radar },
+    { to: "/play-online", label: t("nav.playOnline"), icon: Globe },
     { to: "/new-game", label: t("nav.playVsFriend"), icon: Swords },
     { to: "/ai-game/new", label: t("nav.playVsAi"), icon: Cpu },
   ];
